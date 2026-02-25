@@ -1,15 +1,46 @@
-1. **Üye Olma**
-   - **API Metodu:** `POST /auth/register`
-   - **Açıklama:** Kullanıcıların yeni hesaplar oluşturarak sisteme kayıt olmasını sağlar. Kişisel bilgilerin toplanmasını ve hesap oluşturma işlemlerini içerir. Kullanıcılar email adresi ve şifre belirleyerek hesap oluşturur.
 
-2. **Profil Görüntüleme**
-   - **API Metodu:** `GET /users/{userId}`
-   - **Açıklama:** Kullanıcının profil bilgilerini görüntülemesini sağlar. Kullanıcı adı, email, telefon gibi kişisel bilgiler ve hesap durumu gösterilir. Kullanıcılar kendi profil bilgilerini görüntüleyebilir veya yöneticiler diğer kullanıcıların bilgilerini inceleyebilir. Güvenlik için giriş yapmış olmak gerekir.
+### 1. Kullanıcı Kayıt (Sign Up)  
+**API Metodu:** `POST /api/auth/register`  
+**Açıklama:** Kullanıcıların e-posta, kullanıcı adı ve şifre ile sisteme dahil olmasını sağlar. Veritabanında yeni bir kullanıcı nesnesi oluşturulur.
 
-3. **Profil Güncelleme**
-   - **API Metodu:** `PUT /users/{userId}`
-   - **Açıklama:** Kullanıcının profil bilgilerini güncellemesini sağlar. Kullanıcılar ad, soyad, email, telefon gibi kişisel bilgilerini değiştirebilir. Güvenlik için giriş yapmış olmak gerekir ve kullanıcılar yalnızca kendi bilgilerini güncelleyebilir.
+---
 
-4. **Hesap Silme**
-   - **API Metodu:** `DELETE /users/{userId}`
-   - **Açıklama:** Kullanıcının hesabını sistemden kalıcı olarak silmesini sağlar. Kullanıcı hesabını kapatmak istediğinde veya yönetici tarafından hesap kapatılması gerektiğinde kullanılır. Bu işlem geri alınamaz ve kullanıcının tüm verileri silinir. Güvenlik için giriş yapmış olmak gerekir.
+### 2. Film/Dizi Arama  
+**API Metodu:** `GET /api/movies/search?q={query}`  
+**Açıklama:** Kullanıcının girdiği anahtar kelimeye göre başlık, yönetmen veya oyuncu bazlı arama sonuçlarını listeler.
+
+---
+
+### 3. İçeriğe Puan Verme (Rating)  
+**API Metodu:** `POST /api/movies/{movieId}/rate`  
+**Açıklama:** Kullanıcının bir filme 1 ile 5 yıldız (0.5 hassasiyetli olabilir) arasında puan vermesini sağlar.
+
+---
+
+### 4. İzlenecekler Listesine Ekleme (Watchlist)  
+**API Metodu:** `PUT /api/users/{userId}/watchlist`  
+**Açıklama:** Kullanıcının gelecekte izlemek istediği filmleri kaydettiği listeye içerik ekler.
+
+---
+
+### 5. İzlenecekler Listesinden Çıkarma  
+**API Metodu:** `DELETE /api/users/{userId}/watchlist/{movieId}`  
+**Açıklama:** Bir film izlendiğinde veya vazgeçildiğinde Watchlist'ten kaldırılmasını sağlar.
+
+---
+
+### 6. En Yüksek Puan Alanları Listeleme (Top Rated)  
+**API Metodu:** `GET /api/movies/top-rated`  
+**Açıklama:** Kullanıcı oylarının aritmetik ortalamasına göre en yüksek puanlı filmleri azalan sırada getirir.
+
+---
+
+### 7. Favorilere Ekleme (Like)  
+**API Metodu:** `POST /api/movies/{movieId}/like`  
+**Açıklama:** Kullanıcının bir filmi "Favori" olarak işaretlemesini sağlar (Letterboxd'daki kalp butonu).
+
+---
+
+### 8. Özel Liste Oluşturma (Custom Lists)  
+**API Metodu:** `POST /api/lists`  
+**Açıklama:** Kullanıcının "2024 Favorilerim" veya "Hafta Sonu Filmleri" gibi isimlerle özel film listeleri oluşturmasını sağlar.
