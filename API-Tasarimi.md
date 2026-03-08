@@ -9,49 +9,54 @@ Bu doküman, OpenAPI Specification (OAS) 3.0 standardına göre hazırlanmış �
 ```yaml
 openapi: 3.0.3
 info:
-  title: E-Ticaret API
+  title: Rateflix API
   description: |
-    E-ticaret platformu için RESTful API.
-    
-    ## Özellikler
-    - Kullanıcı yönetimi
-    - Ürün katalog yönetimi
-    - Sipariş işlemleri
-    - JWT tabanlı kimlik doğrulama
+    Sinema tutkunları için geliştirilmiş, Letterboxd ekosistemini temel alan kapsamlı bir film sosyal ağ ve takip platformu API'sı. 
+    Kullanıcıların izledikleri filmleri günlük tutar gibi kaydetmesine, puanlamasına ve toplulukla etkileşime girmesine olanak tanır.
+
+    ## Temel Özellikler
+    - İzlenen filmlerin tarih bazlı takibi ve kişisel arşiv yönetimi.
+    - Kullanıcı takibi, film yorumları ve beğeni sistemi.
+    - Dinamik film listeleri oluşturma (Watchlist, Favoriler, Tematik Listeler).
+    - 5 yıldızlı hassas değerlendirme mekanizması.
+    - Güvenli kullanıcı girişi ve yetkilendirme süreçleri.
+    - Tür, yıl ve popülariteye göre veri odaklı film keşfi.
+
+    Bu API, Rateflix platformunun tüm sinematik veri yönetimini ve sosyal ağ servislerini uçtan uca kapsamaktadır.
   version: 1.0.0
   contact:
-    name: API Destek Ekibi
-    email: api-support@yazmuh.com
-    url: https://api.yazmuh.com/support
-  license:
+    name: Rateflix Development Team
+    email: dev@rateflix.com
+    url: https://api.platform.com/support
+license:
     name: MIT
     url: https://opensource.org/licenses/MIT
 
 servers:
-  - url: https://api.yazmuh.com/v1
+  - url: https://api.platform.com/v1
     description: Production server
-  - url: https://staging-api.yazmuh.com/v1
+  - url: https://staging-api.platform.com/v1
     description: Staging server
   - url: http://localhost:3000/v1
     description: Development server
 
 tags:
-  - name: users
-    description: Kullanıcı yönetimi işlemleri
-  - name: products
-    description: Ürün katalog işlemleri
-  - name: orders
-    description: Sipariş işlemleri
   - name: auth
     description: Kimlik doğrulama işlemleri
+  - name: contents
+    description: Film ve dizi katalog işlemleri
+  - name: interactions
+    description: Puanlama ve inceleme işlemleri
+  - name: lists
+    description: Kullanıcı listeleri yönetimi
 
 paths:
   /auth/register:
     post:
       tags:
         - auth
-      summary: Yeni kullanıcı kaydı
-      description: Sisteme yeni bir kullanıcı kaydeder
+      summary: Kullanıcı Kayıt (Sign Up)
+      description: Sisteme yeni bir kullanıcı kaydeder. (Sorumlu - Mahmut Kesen)
       operationId: registerUser
       requestBody:
         required: true
@@ -59,14 +64,6 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/UserRegistration'
-            examples:
-              example1:
-                summary: Örnek kullanıcı kaydı
-                value:
-                  email: kullanici@example.com
-                  password: Guvenli123!
-                  firstName: Ahmet
-                  lastName: Yılmaz
       responses:
         '201':
           description: Kullanıcı başarıyla oluşturuldu
@@ -87,8 +84,8 @@ paths:
     post:
       tags:
         - auth
-      summary: Kullanıcı girişi
-      description: Email ve şifre ile giriş yapar, JWT token döner
+      summary: Kullanıcı Giriş (Login)
+      description: Email ve şifre ile giriş yapar, JWT token döner. (Sorumlu - Aytuğ Akay)
       operationId: loginUser
       requestBody:
         required: true
@@ -106,104 +103,182 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
 
-  /users:
-    get:
+  /auth/reset-password:
+    post:
       tags:
-        - users
-      summary: Kullanıcı listesi
-      description: Sistemdeki tüm kullanıcıları listeler (sayfalama ile)
-      operationId: listUsers
-      security:
-        - bearerAuth: []
-      parameters:
-        - $ref: '#/components/parameters/PageParam'
-        - $ref: '#/components/parameters/LimitParam'
-        - name: role
-          in: query
-          description: Kullanıcı rolüne göre filtrele
-          schema:
-            type: string
-            enum: [admin, user, guest]
-      responses:
-        '200':
-          description: Başarılı
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/UserList'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-
-  /users/{userId}:
-    get:
-      tags:
-        - users
-      summary: Kullanıcı detayı
-      description: Belirli bir kullanıcının detay bilgilerini getirir
-      operationId: getUserById
-      security:
-        - bearerAuth: []
-      parameters:
-        - $ref: '#/components/parameters/UserIdParam'
-      responses:
-        '200':
-          description: Başarılı
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/User'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
-    
-    put:
-      tags:
-        - users
-      summary: Kullanıcı güncelle
-      description: Kullanıcı bilgilerini günceller
-      operationId: updateUser
-      security:
-        - bearerAuth: []
-      parameters:
-        - $ref: '#/components/parameters/UserIdParam'
+        - auth
+      summary: Şifre Sıfırlama (Password Reset)
+      description: Kullanıcının şifresini sıfırlaması için email üzerinden bağlantı gönderir. (Sorumlu - Aytuğ Akay)
+      operationId: resetPassword
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/UserUpdate'
+              $ref: '#/components/schemas/PasswordResetRequest'
       responses:
         '200':
-          description: Kullanıcı başarıyla güncellendi
+          description: Şifre sıfırlama bağlantısı gönderildi
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /contents:
+    get:
+      tags:
+        - contents
+      summary: Film/Dizi Arama ve Filtreleme
+      description: İçerikleri arar, kategori/tür bazlı filtreler ile listeler. (Arama - Mahmut Kesen, Filtreleme - Aytuğ Akay)
+      operationId: searchContents
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - name: query
+          in: query
+          description: Arama metni (Film veya dizi adı)
+          schema:
+            type: string
+        - name: genre
+          in: query
+          description: Kategori/Tür bazlı filtreleme örn (Action, Drama)
+          schema:
+            type: string
+        - name: type
+          in: query
+          description: İçerik tipini filtreleme (movie, tv_show)
+          schema:
+            type: string
+            enum: [movie, tv_show]
+      responses:
+        '200':
+          description: Başarılı
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/User'
+                $ref: '#/components/schemas/ContentList'
+
+  /contents/top-rated:
+    get:
+      tags:
+        - contents
+      summary: En Yüksek Puan Alanları Listeleme (Top Rated)
+      description: Platformdaki en yüksek puana sahip içerikleri getirir. (Sorumlu - Mahmut Kesen)
+      operationId: getTopRatedContents
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+      responses:
+        '200':
+          description: Başarılı
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContentList'
+
+  /contents/trending:
+    get:
+      tags:
+        - contents
+      summary: Popüler İçerikleri Listeleme (Trending)
+      description: Güncel olarak en popüler (çok izlenen/aranan) içerikleri getirir. (Sorumlu - Aytuğ Akay)
+      operationId: getTrendingContents
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+      responses:
+        '200':
+          description: Başarılı
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContentList'
+
+  /contents/{contentId}:
+    get:
+      tags:
+        - contents
+      summary: İçerik Detaylarını Görüntüleme
+      description: Belirli bir içeriğin (film/dizi) detaylı bilgilerini getirir. (Sorumlu - Aytuğ Akay)
+      operationId: getContentDetails
+      parameters:
+        - $ref: '#/components/parameters/ContentIdParam'
+      responses:
+        '200':
+          description: Başarılı
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContentBody'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /contents/{contentId}/ratings:
+    post:
+      tags:
+        - interactions
+      summary: İçeriğe Puan Verme (Rating)
+      description: Kullanıcının içeriğe 1-10 arası puan vermesini sağlar. (Sorumlu - Mahmut Kesen)
+      operationId: rateContent
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ContentIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RatingCreate'
+      responses:
+        '201':
+          description: Puan kaydedildi
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
-    
+
+  /contents/{contentId}/reviews:
+    post:
+      tags:
+        - interactions
+      summary: İnceleme/Yorum Yazma (Review)
+      description: Kullanıcının içeriğe metin tabanlı bir inceleme veya yorum bırakmasını sağlar. (Sorumlu - Aytuğ Akay)
+      operationId: addReview
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ContentIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReviewCreate'
+      responses:
+        '201':
+          description: İnceleme eklendi
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Review'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /reviews/{reviewId}:
     delete:
       tags:
-        - users
-      summary: Kullanıcı sil
-      description: Kullanıcıyı sistemden siler
-      operationId: deleteUser
+        - interactions
+      summary: İnceleme Silme
+      description: Kullanıcının kendi yaptığı spesifik bir incelemeyi silmesini sağlar. (Sorumlu - Aytuğ Akay)
+      operationId: deleteReview
       security:
         - bearerAuth: []
       parameters:
-        - $ref: '#/components/parameters/UserIdParam'
+        - $ref: '#/components/parameters/ReviewIdParam'
       responses:
         '204':
-          description: Kullanıcı başarıyla silindi
+          description: İnceleme başarıyla silindi
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
@@ -211,47 +286,13 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
-  /products:
-    get:
-      tags:
-        - products
-      summary: Ürün listesi
-      description: Tüm ürünleri listeler
-      operationId: listProducts
-      parameters:
-        - $ref: '#/components/parameters/PageParam'
-        - $ref: '#/components/parameters/LimitParam'
-        - name: category
-          in: query
-          description: Kategoriye göre filtrele
-          schema:
-            type: string
-        - name: minPrice
-          in: query
-          description: Minimum fiyat
-          schema:
-            type: number
-            format: float
-        - name: maxPrice
-          in: query
-          description: Maximum fiyat
-          schema:
-            type: number
-            format: float
-      responses:
-        '200':
-          description: Başarılı
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ProductList'
-    
+  /lists/watched:
     post:
       tags:
-        - products
-      summary: Yeni ürün ekle
-      description: Sisteme yeni bir ürün ekler
-      operationId: createProduct
+        - lists
+      summary: İzlediklerim Listesine Ekleme (Log)
+      description: Bir içeriği kullanıcının izledikleri arasına loglar. (Sorumlu - Aytuğ Akay)
+      operationId: addToWatched
       security:
         - bearerAuth: []
       requestBody:
@@ -259,62 +300,22 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ProductCreate'
+              $ref: '#/components/schemas/ListItemOperation'
       responses:
-        '201':
-          description: Ürün başarıyla oluşturuldu
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Product'
+        '200':
+          description: İzlenenler listesine eklendi
         '400':
           $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
 
-  /products/{productId}:
-    get:
-      tags:
-        - products
-      summary: Ürün detayı
-      description: Belirli bir ürünün detay bilgilerini getirir
-      operationId: getProductById
-      parameters:
-        - $ref: '#/components/parameters/ProductIdParam'
-      responses:
-        '200':
-          description: Başarılı
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Product'
-        '404':
-          $ref: '#/components/responses/NotFound'
-
-  /orders:
-    get:
-      tags:
-        - orders
-      summary: Sipariş listesi
-      description: Kullanıcının siparişlerini listeler
-      operationId: listOrders
-      security:
-        - bearerAuth: []
-      parameters:
-        - $ref: '#/components/parameters/PageParam'
-        - $ref: '#/components/parameters/LimitParam'
-      responses:
-        '200':
-          description: Başarılı
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/OrderList'
-    
+  /lists/watchlist:
     post:
       tags:
-        - orders
-      summary: Yeni sipariş oluştur
-      description: Yeni bir sipariş oluşturur
-      operationId: createOrder
+        - lists
+      summary: İzlenecekler Listesine Ekleme (Watchlist)
+      description: Bir içeriği kullanıcının daha sonra izleyeceği listeye ekler. (Sorumlu - Mahmut Kesen)
+      operationId: addToWatchlist
       security:
         - bearerAuth: []
       requestBody:
@@ -322,14 +323,79 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/OrderCreate'
+              $ref: '#/components/schemas/ListItemOperation'
+      responses:
+        '200':
+          description: İzlenecekler listesine eklendi
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /lists/watchlist/{contentId}:
+    delete:
+      tags:
+        - lists
+      summary: İzlenecekler Listesinden Çıkarma
+      description: İçeriği izlenecekler listesinden kaldırır. (Sorumlu - Mahmut Kesen)
+      operationId: removeFromWatchlist
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ContentIdParam'
+      responses:
+        '204':
+          description: Listeden başarıyla çıkarıldı
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /lists/favorites:
+    post:
+      tags:
+        - lists
+      summary: Favorilere Ekleme (Like)
+      description: İçeriği kullanıcının favorilerine ekler veya favorilerden çıkarır. (Sorumlu - Mahmut Kesen)
+      operationId: toggleFavorite
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ListItemOperation'
+      responses:
+        '200':
+          description: Favorilere ekleme işlemi başarılı
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /lists/custom:
+    post:
+      tags:
+        - lists
+      summary: Özel Liste Oluşturma (Custom Lists)
+      description: Kullanıcının özel isim ve açıklamayla seçili içeriklerden oluşan liste yaratmasını sağlar. (Sorumlu - Mahmut Kesen)
+      operationId: createCustomList
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CustomListCreate'
       responses:
         '201':
-          description: Sipariş başarıyla oluşturuldu
+          description: Özel liste başarıyla oluşturuldu
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Order'
+                $ref: '#/components/schemas/CustomList'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
 
 components:
   securitySchemes:
@@ -337,142 +403,107 @@ components:
       type: http
       scheme: bearer
       bearerFormat: JWT
-      description: JWT token ile kimlik doğrulama
+      description: API uç noktalarını korumak için kullanılan Bearer tabanlı JSON Web Token yetkilendirme yapısı.
 
   parameters:
-    UserIdParam:
-      name: userId
+    ContentIdParam:
+      name: contentId
       in: path
       required: true
-      description: Kullanıcı ID'si
+      description: İşlem veya sorgulama yapılacak olan içeriğin (Film/Dizi) veritabanındaki benzersiz kimliğini belirten rotalama parametresi.
       schema:
         type: string
         format: uuid
-    
-    ProductIdParam:
-      name: productId
+        description: Geçerli bir UUID formatında string içerik kimliği.
+        
+    ReviewIdParam:
+      name: reviewId
       in: path
       required: true
-      description: Ürün ID'si
+      description: Silinecek veya üzerinde işlem yapılacak incelemenin (yorumun) benzersiz kimliğini ifade eden URL parametresi.
       schema:
         type: string
         format: uuid
+        description: Geçerli bir UUID formatında string inceleme kimliği.
     
     PageParam:
       name: page
       in: query
-      description: Sayfa numarası
+      description: Listeleme işlemlerinde sonuç setinin kaçıncı sayfasının getirileceğini belirten aktif sayfa değeri.
       schema:
         type: integer
         minimum: 1
         default: 1
+        description: Tamsayı formatında listeleme/sayfa numarası.
     
     LimitParam:
       name: limit
       in: query
-      description: Sayfa başına kayıt sayısı
+      description: Listeleme işlemlerinde, her bir sayfada en fazla kaç verinin gösterileceğini belirten sınır değeri.
       schema:
         type: integer
         minimum: 1
         maximum: 100
         default: 20
+        description: Geçerli sayfanın kapasitesini belirten tamsayı değeri.
 
   schemas:
     User:
+      description: Sistemdeki bir kullanıcıyı/üyeyi tam kapsamlı temsil eden veri modeli. Profil ve temel üyelik bilgilerini içerir.
       type: object
       required:
         - id
         - email
-        - firstName
-        - lastName
-        - role
+        - username
         - createdAt
       properties:
         id:
           type: string
           format: uuid
-          description: Kullanıcı benzersiz kimliği
-          example: "123e4567-e89b-12d3-a456-426614174000"
+          description: Kullanıcının sistem veritabanındaki eşsiz benzersiz kimlik (UUID) değeri.
+          example: "550e8400-e29b-41d4-a716-446655440000"
         email:
           type: string
           format: email
-          description: Kullanıcı email adresi
+          description: Kullanıcının kayıt olurken kullandığı ve sisteme giriş yaptığı eşsiz e-posta adresi.
           example: "kullanici@example.com"
-        firstName:
+        username:
           type: string
-          description: Ad
-          example: "Ahmet"
-        lastName:
-          type: string
-          description: Soyad
-          example: "Yılmaz"
-        role:
-          type: string
-          enum: [admin, user, guest]
-          description: Kullanıcı rolü
-          example: "user"
+          description: Kullanıcının profilinde ve yaptığı incelemelerde başkalarına görünecek olan eşsiz lakap/kullanıcı adı.
+          example: "sinemasever99"
         createdAt:
           type: string
           format: date-time
-          description: Oluşturulma tarihi
-          example: "2024-01-15T10:30:00Z"
-        updatedAt:
-          type: string
-          format: date-time
-          description: Güncellenme tarihi
-          example: "2024-01-20T14:45:00Z"
-        phone:
-          type: string
-          description: Telefon numarası
-          example: "+905551234567"
-
+          description: Bu kullanıcı hesabının platform üzerinde ilk kaydedildiği tarih ve zaman bilgisi.
+          example: "2023-11-20T10:20:30Z"
+          
     UserRegistration:
+      description: Yeni bir kullanıcı hesabı oluşturulurken (kayıt olurken) form üzerinden beklenen iletişim paketi modeli.
       type: object
       required:
         - email
         - password
-        - firstName
-        - lastName
+        - username
       properties:
         email:
           type: string
           format: email
+          description: Kayıt olunacak geçerli sistemden bildirim de alabilecek e-posta adresi.
           example: "kullanici@example.com"
         password:
           type: string
           format: password
           minLength: 8
-          example: "Guvenli123!"
-        firstName:
+          description: Güvenlik standartlarına uygun, hesabın korunmasını sağlayacak şifre (min 8 karakter).
+          example: "Guvenli123*"
+        username:
           type: string
-          minLength: 2
-          example: "Ahmet"
-        lastName:
-          type: string
-          minLength: 2
-          example: "Yılmaz"
-
-    UserUpdate:
-      type: object
-      properties:
-        firstName:
-          type: string
-          minLength: 2
-          example: "Ahmet"
-        lastName:
-          type: string
-          minLength: 2
-          example: "Yılmaz"
-        email:
-          type: string
-          format: email
-          example: "yeniemail@example.com"
-        phone:
-          type: string
-          description: Telefon numarası
-          example: "+905551234567"
+          minLength: 3
+          description: Platformda kullanılmak üzere seçilen sisteme özel eşsiz kullanıcı adı (min 3 karakter).
+          example: "sinemasever99"
 
     LoginCredentials:
+      description: Kullanıcının oturum açmak için göndermesi gereken sisteme giriş kimlik doğrulaması verileri.
       type: object
       required:
         - email
@@ -481,13 +512,28 @@ components:
         email:
           type: string
           format: email
+          description: Hesabın bağlı olduğu ve onaylanmış kayıtlı e-posta adresi.
           example: "kullanici@example.com"
         password:
           type: string
           format: password
-          example: "Guvenli123!"
+          description: Doğrulama için kullanılacak gizli kullanıcı şifresi.
+          example: "Guvenli123*"
+
+    PasswordResetRequest:
+      description: Şifresini unutan kullanıcıların, yeni bir şifre talep etmek üzere başlattıkları iletişim verisi.
+      type: object
+      required:
+        - email
+      properties:
+        email:
+          type: string
+          format: email
+          description: Şifre sıfırlama bağlantısının gönderileceği e-posta adresi.
+          example: "kullanici@example.com"
 
     AuthToken:
+      description: Başarılı bir oturum açma işleminden sonra uygulamaya gönderilen yetki bilgisi ve token yapısı.
       type: object
       required:
         - token
@@ -496,237 +542,230 @@ components:
       properties:
         token:
           type: string
-          description: JWT access token
+          description: Yetki gerektiren API isteklerinde 'header' üzerinde gönderilmesi beklenen JWT token'i.
           example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
         expiresIn:
           type: integer
-          description: Token geçerlilik süresi (saniye)
+          description: Verilen JWT token'in saniye cinsinden toplam yaşam süresi/geçerlilik vakt.
           example: 3600
         user:
+          description: Mevcut oturumu açan ilgili kullanıcının sistemdeki açık profil datası.
           $ref: '#/components/schemas/User'
 
-    Product:
+    ContentBody:
+      description: Platformda yer alan tekil bir içerik materyalini (Film veya Dizi) betimleyen ana nesne.
       type: object
       required:
         - id
-        - name
-        - price
-        - category
-        - stock
+        - title
+        - type
+        - releaseDate
       properties:
         id:
           type: string
           format: uuid
-          example: "987e6543-e21b-12d3-a456-426614174000"
-        name:
+          description: İçeriğin veritabanında saklandığı benzersiz UUID sistem kimliği numarası.
+          example: "123e4567-e89b-12d3-a456-426614174000"
+        title:
           type: string
-          description: Ürün adı
-          example: "Laptop"
+          description: Filmin ya da dizinin sistem üzerindeki görünen resmi başlığı/adı.
+          example: "The Matrix"
+        type:
+          type: string
+          enum: [movie, tv_show]
+          description: Bu içeriğin format olarak bir uzun metraj film mi yoksa bölümlü dizi mi olduğunu ifade eden ayrıştırıcı.
+          example: "movie"
+        genres:
+          type: array
+          items:
+            type: string
+          description: İçeriğin türünü/kategorisini liste şeklinde belirten ana alan etiketleri topluluğu.
+          example: ["Action", "Sci-Fi"]
         description:
           type: string
-          description: Ürün açıklaması
-          example: "15.6 inç, 16GB RAM, 512GB SSD"
-        price:
+          description: İçeriğin genel seyirci özetini (Sinopsis), konusunu açıklayan detay metni.
+          example: "Bilgisayar korsanı olan Thomas Anderson gerçeği keşfeder..."
+        releaseDate:
+          type: string
+          format: date
+          description: İçeriğin sinemada gösterime girdiği veya ilk ekrana çıktığı tarih.
+          example: "1999-03-31"
+        averageRating:
           type: number
           format: float
-          description: Ürün fiyatı (TL)
-          example: 25999.99
-        category:
-          type: string
-          description: Ürün kategorisi
-          example: "Elektronik"
-        stock:
-          type: integer
-          description: Stok miktarı
-          example: 50
-        imageUrl:
+          description: Platform kullanıcılarının tüm puanlamalarından elde edilen güncel ortalama skor (10 üzerinden).
+          example: 8.7
+        posterUrl:
           type: string
           format: uri
-          description: Ürün görseli URL'i
-          example: "https://example.com/images/laptop.jpg"
-        createdAt:
-          type: string
-          format: date-time
-        updatedAt:
-          type: string
-          format: date-time
+          description: Ana listelerde veya detay sayfasında görünmesi amaçlanan içerik kapak/afiş resminin linki.
+          example: "https://example.com/matrix-poster.jpg"
+          
+    ContentList:
+      description: Dizi ve filmlerin filtrelenmiş verilerinin, sayfalama yapısıyla beraber kullanıcıya tek pakette dönüldüğü model.
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/ContentBody'
+          description: Arama veya kategori kriterine uyan tüm film ve dizilerin liste hali.
+        pagination:
+          description: Beraberinde dönen dizinizin kaçıncı sayfasında olduğunuzu anlatan meta veri bölümü.
+          $ref: '#/components/schemas/Pagination'
 
-    ProductCreate:
+    RatingCreate:
+      description: Bir kullanıcının seçtiği bir diziye/filme bıraktığı doğrudan derecelendirme/puanlama eylemi modeli.
       type: object
       required:
-        - name
-        - price
-        - category
-        - stock
+        - score
       properties:
-        name:
-          type: string
-          minLength: 3
-        description:
-          type: string
-        price:
-          type: number
-          format: float
-          minimum: 0
-        category:
-          type: string
-        stock:
+        score:
           type: integer
-          minimum: 0
-        imageUrl:
-          type: string
-          format: uri
+          minimum: 1
+          maximum: 10
+          description: Platform politikasında belirlenmiş 1 ile 10 arasında değişebilen puan veya yıldız değer oranı.
+          example: 9
 
-    Order:
+    Review:
+      description: İçerikler (film/dizi) için oluşturulan ve herkese açık biçimde gösterilebilen yorumsal inceleme modeli.
       type: object
       required:
         - id
+        - contentId
         - userId
-        - items
-        - totalAmount
-        - status
+        - text
         - createdAt
       properties:
         id:
           type: string
           format: uuid
+          description: Yoruma/İncelemeye ait tekil veritabanı ID bilgisi.
+          example: "f47ac10b-58cc-4372-a567-0e02b2c3d479"
+        contentId:
+          type: string
+          format: uuid
+          description: Yorumun tam olarak hangi içeriğe atıldığını barındıran filmin/dizinin hedef ID değeri.
+          example: "123e4567-e89b-12d3-a456-426614174000"
         userId:
           type: string
           format: uuid
-        items:
-          type: array
-          items:
-            $ref: '#/components/schemas/OrderItem'
-        totalAmount:
-          type: number
-          format: float
-          description: Toplam tutar (TL)
-        status:
+          description: Bu incelemeyi platformda hangi kullanıcının hazırladığını bağlayan sahip verisi.
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        text:
           type: string
-          enum: [pending, processing, shipped, delivered, cancelled]
-          description: Sipariş durumu
-        shippingAddress:
-          $ref: '#/components/schemas/Address'
+          description: Görüş belirten kişinin yazdığı incelemenin ana paragraf / metin kısmı.
+          example: "Beklentilerimi çok aşan sürükleyici bir deneyimdi."
         createdAt:
           type: string
           format: date-time
-        updatedAt:
-          type: string
-          format: date-time
+          description: İncelemenin ilk yayınlandığı kesin tarih ve saat damgası.
+          example: "2023-12-05T14:48:00Z"
 
-    OrderCreate:
+    ReviewCreate:
+      description: İstemciden yeni bir inceleme kaydetmesi için gelen işlenmemiş düz salt metin modeli.
       type: object
       required:
-        - items
-        - shippingAddress
+        - text
       properties:
-        items:
-          type: array
-          minItems: 1
-          items:
-            type: object
-            required:
-              - productId
-              - quantity
-            properties:
-              productId:
-                type: string
-                format: uuid
-              quantity:
-                type: integer
-                minimum: 1
-        shippingAddress:
-          $ref: '#/components/schemas/Address'
+        text:
+          type: string
+          minLength: 10
+          description: İncelemenin geçerli sayılabilmesi için istenen anlamlı görüş bloğu (Min 10 karakter).
+          example: "Kesinlikle izlenmesi gereken bir başyapıt..."
 
-    OrderItem:
+    ListItemOperation:
+      description: Kullanıcı özel listelerine (Favoriler, İzlenecekler Vb.) dinamik olarak içerik kimliği gönderme köprü objesi.
       type: object
+      required:
+        - contentId
       properties:
-        productId:
+        contentId:
           type: string
           format: uuid
-        productName:
-          type: string
-        quantity:
-          type: integer
-        unitPrice:
-          type: number
-          format: float
-        totalPrice:
-          type: number
-          format: float
+          description: İşlem yapılmak veya ilgili listeye katılmak/kaldırılmak istenen içeriğin eşsiz ID'si.
+          example: "123e4567-e89b-12d3-a456-426614174000"
 
-    Address:
+    CustomList:
+      description: Kullanıcıların kendi tercihiyle adını ve içeriğini kurguladığı kalıcı profil paylaşım/oynatım liste objesi.
       type: object
       required:
-        - street
-        - city
-        - postalCode
-        - country
+        - id
+        - userId
+        - name
+        - isPublic
       properties:
-        street:
+        id:
           type: string
-          example: "Atatürk Caddesi No:123"
-        city:
+          format: uuid
+          description: Veritabanında yaratılan bu özel listenin kendi ID numarası.
+          example: "987e6543-e21b-12d3-a456-426614174000"
+        userId:
           type: string
-          example: "İstanbul"
-        postalCode:
+          format: uuid
+          description: Listeyi profiline sabitleyen veya yöneten kullanıcının hesap numarası (ID).
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        name:
           type: string
-          example: "34000"
-        country:
+          description: Listenin kapak bölümünde sergilenecek olan etkileyici isim/başlık.
+          example: "Haftasonu Maratonu"
+        description:
           type: string
-          example: "Türkiye"
+          description: Listede ne tarz şeylerin yer aldığını betimleyen açıklama (Opsiyonel).
+          example: "Boş vakitlerde ardı ardına izlenebilecek hızlı yapımlar."
+        isPublic:
+          type: boolean
+          description: Bu listenin sadece sahibi tarafında mı (Gizli) yoksa tüm platformda mı (Açık) görülebilir olacağı onayı.
+          example: true
+        createdAt:
+          type: string
+          format: date-time
+          description: Bu listenin koleksiyon sisteminde ilk inşa edildiği tarih bilgisi.
+          example: "2024-01-15T10:30:00Z"
 
-    UserList:
+    CustomListCreate:
+      description: Yeni bir özel kullanıcı listesi dizayn etmek amacıyla sistem API'sine bildirilen kural çerçevesi.
       type: object
+      required:
+        - name
       properties:
-        data:
-          type: array
-          items:
-            $ref: '#/components/schemas/User'
-        pagination:
-          $ref: '#/components/schemas/Pagination'
-
-    ProductList:
-      type: object
-      properties:
-        data:
-          type: array
-          items:
-            $ref: '#/components/schemas/Product'
-        pagination:
-          $ref: '#/components/schemas/Pagination'
-
-    OrderList:
-      type: object
-      properties:
-        data:
-          type: array
-          items:
-            $ref: '#/components/schemas/Order'
-        pagination:
-          $ref: '#/components/schemas/Pagination'
+        name:
+          type: string
+          description: Planlanan listenin ilk tanımlanan resmi ismi.
+          example: "Haftasonu Maratonu"
+        description:
+          type: string
+          description: Listeyi anlamlandırmak ve etiketlemek için eklenebilecek taslaksal alt açıklama.
+          example: "Boş vakitlerde izlenecek epik bilim kurgu filmleri"
+        isPublic:
+          type: boolean
+          default: false
+          description: Oluşturulacak yapının doğrudan görünürlüğünü belirten bool yapı (false = gizli ayar).
+          example: true
 
     Pagination:
+      description: Çok veri barından uç noktalarda (Arama, listeler) dönen verinin arayüzde doğru sayfalara bölünmesini organize eden yardımcı standart obje.
       type: object
       properties:
         page:
           type: integer
-          description: Mevcut sayfa
+          description: Şu an okunan sistem cevap paketinin kaçıncı ardışık sayfa olduğu.
           example: 1
         limit:
           type: integer
-          description: Sayfa başına kayıt
+          description: Geri dönülen paket içinde en fazla kaç film/dizi olabileceğinin kuralı.
           example: 20
         totalPages:
           type: integer
-          description: Toplam sayfa sayısı
-          example: 5
+          description: Veri havuzunda, verilen limitte sorguya uyacak şekilde doğan toplam en fazla sayfa adedi.
+          example: 15
         totalItems:
           type: integer
-          description: Toplam kayıt sayısı
-          example: 95
+          description: Veritabanında ilgili filtre ve şarta uyan toplamda kaç adet ham veri/içerik (Film/Dizi kalemi) olduğu.
+          example: 295
 
     Error:
+      description: Platformda işler yolunda gitmediğinde (hata, kısıtlı yetki, yanlış veri) üretilen standart hata yönetim kalıbı.
       type: object
       required:
         - code
@@ -734,28 +773,31 @@ components:
       properties:
         code:
           type: string
-          description: Hata kodu
+          description: Loglama ve ön-yüzün dil desteği ile çözebilmesi için geliştirici kod numaralandırma sistemi (Örn: VALIDATION_ERROR).
           example: "VALIDATION_ERROR"
         message:
           type: string
-          description: Hata mesajı
-          example: "Geçersiz email adresi"
+          description: İstek sahibinin veya direkt uygulamanın anlayabileceği düzeyde açıklanmış insan dili hata hikayesi.
+          example: "Girdiğiniz veriler doğrulama kuralını geçemedi."
         details:
           type: array
-          description: Detaylı hata bilgileri
+          description: Çoklu bir validasyon hatası varsa (hem email hem şifre hatalı ise), bu alanın listelendiği dizi alanı.
           items:
             type: object
+            description: Kapsamlı hatadaki spesifik alan bilgisini taşıyan mini sözlük.
             properties:
               field:
                 type: string
-                example: "email"
+                description: POST/PUT objesinde gönderilirken çuvallayan alanın gerçek ismi (Örn: email).
+                example: "password"
               message:
                 type: string
-                example: "Email formatı geçersiz"
+                description: O alandaki çuvallamanın özel nedeni (Örn: en az 8 karakter olmalı).
+                example: "Şifreniz en az 8 karakter uzunluğunda olmalıdır."
 
   responses:
     BadRequest:
-      description: Geçersiz istek
+      description: Geçersiz istek (Parametre hataları, zorunlu alan eksikliği vb.)
       content:
         application/json:
           schema:
@@ -765,32 +807,31 @@ components:
             message: "İstek parametreleri geçersiz"
     
     Unauthorized:
-      description: Yetkisiz erişim
+      description: Yetkisiz erişim (Eksik veya geçersiz JWT token durumu, login olmamış aktör)
       content:
         application/json:
           schema:
             $ref: '#/components/schemas/Error'
           example:
             code: "UNAUTHORIZED"
-            message: "Kimlik doğrulama başarısız"
+            message: "Kimlik doğrulama başarısız. Lütfen önce giriş yapın."
     
     NotFound:
-      description: Kaynak bulunamadı
+      description: Kaynak bulunamadı (Tıklanan film silinmiş, ID artık veritabanında geçersiz vb.)
       content:
         application/json:
           schema:
             $ref: '#/components/schemas/Error'
           example:
             code: "NOT_FOUND"
-            message: "İstenen kaynak bulunamadı"
+            message: "İstenen/aranan kaynak bulunamadı."
     
     Forbidden:
-      description: Erişim reddedildi
+      description: Erişim reddedildi (Token mevcut ama silme/görme işlemine hesaba ait yetki yok, örn. başkasının yorumunu silme)
       content:
         application/json:
           schema:
             $ref: '#/components/schemas/Error'
           example:
             code: "FORBIDDEN"
-            message: "Bu işlem için yetkiniz bulunmamaktadır"
-``
+            message: "Bu işlemi gerçekleştirmek için yetkiniz sınırlandırılmış."
