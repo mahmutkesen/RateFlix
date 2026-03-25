@@ -1,0 +1,109 @@
+.movie-card {
+    display: flex;
+    flex-direction: column;
+    border-radius: 12px;
+    overflow: hidden;
+    background: var(--bg-color-light);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    border: 1px solid var(--glass-border);
+}
+
+.movie-card:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+.card-image-wrapper {
+    position: relative;
+    aspect-ratio: 2/3;
+    overflow: hidden;
+}
+
+.card-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.5s ease;
+}
+
+.movie-card:hover .card-image {
+    transform: scale(1.05);
+}
+
+.card-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    padding: 0.6rem;
+    background: linear-gradient(to bottom, rgba(0,0,0,0.7) 0%, transparent 100%);
+    display: flex;
+    justify-content: flex-end;
+}
+
+.badges-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    align-items: flex-end;
+}
+
+.rating-badge {
+    padding: 0.2rem 0.6rem;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    border: 1px solid rgba(255,255,255,0.15);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.4);
+}
+
+.rating-badge.tmdb {
+    background: rgba(15, 23, 42, 0.9);
+    color: #fbbf24;
+    border-color: rgba(251, 191, 36, 0.3);
+}
+
+.rating-badge.rateflix {
+    background: rgba(212, 175, 55, 0.95);
+    color: #000;
+    border-color: rgba(0,0,0,0.1);
+}
+
+.rf-logo-small {
+    background: #000;
+    color: #d4af37;
+    width: 14px;
+    height: 14px;
+    border-radius: 3px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.6rem;
+    font-weight: 900;
+}
+
+.star-icon {
+    font-size: 0.75rem;
+}
+
+.card-content {
+    padding: 1rem;
+}
+
+.card-title {
+    font-size: 1rem;
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.card-year {
+    color: var(--text-muted);
+    font-size: 0.85rem;
+}

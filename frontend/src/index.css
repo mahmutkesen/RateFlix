@@ -1,0 +1,132 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap');
+
+:root {
+  /* Premium Deep Black Theme */
+  --bg-color: #050505;
+  --bg-color-light: #121212;
+  --text-color: #f3f4f6;
+  --text-muted: #9ca3af;
+  
+  /* Luxurious Gold Accents */
+  --primary-color: #d4af37; /* Classic Gold */
+  --primary-hover: #f1c40f; /* Brighter Gold */
+  --primary-gradient: linear-gradient(135deg, #d4af37 0%, #f39c12 100%);
+  
+  --danger-color: #e74c3c;
+  --star-color: #f1c40f;
+  
+  /* Glassmorphism Refined for Dark Mode */
+  --glass-bg: rgba(18, 18, 18, 0.65);
+  --glass-border: rgba(212, 175, 55, 0.15); /* Subtle gold border */
+  --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Outfit', sans-serif;
+  background-color: var(--bg-color);
+  color: var(--text-color);
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  background-image: 
+    radial-gradient(circle at 15% 50%, rgba(212, 175, 55, 0.03) 0%, transparent 50%),
+    radial-gradient(circle at 85% 30%, rgba(212, 175, 55, 0.04) 0%, transparent 50%);
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button {
+  cursor: pointer;
+  border: none;
+  outline: none;
+  font-family: 'Outfit', sans-serif;
+}
+
+input, textarea {
+  font-family: 'Outfit', sans-serif;
+}
+
+/* Glassmorphism Utilities */
+.glass-panel {
+  background: var(--glass-bg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--glass-border);
+  border-radius: 16px;
+  box-shadow: var(--glass-shadow);
+}
+
+/* Global Layout */
+.container {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+/* Forms */
+.form-group {
+  margin-bottom: 1.25rem;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 0.5rem;
+  color: var(--text-color);
+  font-weight: 500;
+  font-size: 0.9rem;
+  letter-spacing: 0.5px;
+}
+
+.form-group input, .form-group textarea {
+  width: 100%;
+  padding: 0.85rem 1.2rem;
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  color: var(--text-color);
+  transition: all 0.3s ease;
+  font-size: 1rem;
+}
+
+.form-group input:focus, .form-group textarea:focus {
+  border-color: var(--primary-color);
+  background: rgba(0, 0, 0, 0.7);
+  box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.15);
+  outline: none;
+}
+
+.btn-primary {
+  background: var(--primary-gradient);
+  color: #000;
+  padding: 0.8rem 1.8rem;
+  border-radius: 30px;
+  font-weight: 700;
+  font-size: 1rem;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 15px rgba(212, 175, 55, 0.3);
+}
+
+.btn-primary:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 25px rgba(212, 175, 55, 0.4);
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(15px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}

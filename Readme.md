@@ -1,6 +1,6 @@
 # RATEFLİX
 
-> **Not:** Bu bölüm proje adı ile güncellenmelidir.
+
 
 ---
 

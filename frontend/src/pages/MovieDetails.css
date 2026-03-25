@@ -1,0 +1,103 @@
+.movie-details {
+    margin-top: -80px; /* Offset navbar padding for full width backdrop */
+}
+
+.backdrop-container {
+    height: 60vh;
+    min-height: 400px;
+    background-size: cover;
+    background-position: center;
+    position: relative;
+}
+
+.backdrop-overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to top, var(--bg-color), rgba(15, 23, 42, 0.4));
+}
+
+.details-content {
+    position: relative;
+    margin-top: -150px;
+    display: flex;
+    gap: 3rem;
+    align-items: flex-start;
+    z-index: 10;
+}
+
+.details-poster {
+    width: 300px;
+    border-radius: 12px;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.6);
+    border: 1px solid var(--glass-border);
+}
+
+.details-info {
+    flex: 1;
+    padding-top: 2rem;
+}
+
+.title {
+    font-size: 3rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+    line-height: 1.1;
+}
+
+.tagline {
+    font-size: 1.25rem;
+    font-style: italic;
+    color: var(--text-muted);
+    margin-bottom: 1rem;
+}
+
+.meta {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    color: var(--text-muted);
+    font-size: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.overview {
+    font-size: 1.1rem;
+    line-height: 1.8;
+    color: var(--text-color);
+}
+
+.hover-scale {
+    transition: transform 0.2s ease;
+}
+.hover-scale:hover {
+    transform: translateX(5px);
+}
+
+@media (max-width: 768px) {
+    .details-content {
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+    }
+    .meta {
+        justify-content: center;
+    }
+}
+
+.list-item-hover {
+    transition: all 0.2s ease;
+}
+
+.list-item-hover:hover {
+    background: rgba(212, 175, 55, 0.1) !important;
+    padding-left: 15px !important;
+}
+
+.animate-slide-in {
+    animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}

@@ -1,0 +1,199 @@
+.admin-page {
+    padding: 2rem 0;
+}
+
+.admin-header {
+    text-align: center;
+    margin-bottom: 3rem;
+}
+
+.admin-header h1 {
+    font-size: 2.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.admin-tabs {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+    margin-bottom: 2.5rem;
+}
+
+.admin-tabs button {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: var(--text-muted);
+    padding: 0.8rem 2rem;
+    border-radius: 30px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.3s;
+}
+
+.admin-tabs button:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.admin-tabs button.active {
+    background: var(--primary-gradient);
+    color: #000;
+    border-color: transparent;
+    box-shadow: 0 4px 15px rgba(212, 175, 55, 0.3);
+}
+
+.admin-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 2rem;
+    margin-bottom: 2rem;
+}
+
+.stat-card {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    padding: 2rem;
+    border-radius: 20px;
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.highlight-stat {
+    border: 1px solid rgba(212, 175, 55, 0.2);
+    background: rgba(212, 175, 55, 0.05);
+}
+
+.stat-icon {
+    width: 60px;
+    height: 60px;
+    background: var(--primary-gradient);
+    border-radius: 15px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    color: #000;
+}
+
+.stat-info h3 {
+    font-size: 0.9rem;
+    color: var(--text-muted);
+    margin-bottom: 0.5rem;
+}
+
+.stat-number {
+    font-size: 2rem;
+    font-weight: 800;
+    line-height: 1;
+}
+
+.admin-table-container {
+    overflow-x: auto;
+    border-radius: 20px;
+    margin-top: 1rem;
+}
+
+.admin-table {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: left;
+}
+
+.admin-table th {
+    padding: 1.2rem 1.5rem;
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text-muted);
+    font-weight: 600;
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.admin-table td {
+    padding: 1.2rem 1.5rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.admin-table tr:last-child td {
+    border-bottom: none;
+}
+
+.user-cell {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.user-avatar-mini {
+    width: 35px;
+    height: 35px;
+    border-radius: 50%;
+    background: var(--primary-gradient);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #000;
+    font-weight: bold;
+    overflow: hidden;
+}
+
+.user-avatar-mini img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.role-badge {
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 700;
+}
+
+.role-badge.admin {
+    background: rgba(212, 175, 55, 0.1);
+    color: var(--primary-color);
+    border: 1px solid rgba(212, 175, 55, 0.3);
+}
+
+.role-badge.user {
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text-muted);
+}
+
+.admin-actions-cell {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.btn-action {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    color: #fff;
+}
+
+.btn-action:hover {
+    background: rgba(255, 255, 255, 0.1);
+    transform: translateY(-2px);
+}
+
+.btn-action.delete:hover {
+    background: rgba(255, 118, 117, 0.1);
+    border-color: #ff7675;
+    color: #ff7675;
+}
+
+.admin-notice {
+    margin-top: 3rem;
+    padding: 1.5rem;
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+}
