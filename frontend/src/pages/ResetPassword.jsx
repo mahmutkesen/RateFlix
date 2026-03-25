@@ -23,7 +23,7 @@ const ResetPassword = () => {
             setMessage(err.response?.data?.message || 'Şifre sıfırlanırken hata oluştu.');
         }
     };
-
+ 
     return (
         <div style={{ paddingTop: '100px', maxWidth: '400px', margin: '0 auto' }}>
             <div className="glass-panel" style={{ padding: '2rem' }}>

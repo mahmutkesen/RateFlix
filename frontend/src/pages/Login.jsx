@@ -22,7 +22,7 @@ const Login = () => {
         localStorage.setItem('user', JSON.stringify(res.data.user));
         navigate('/');
     } catch (err) {
-        setError(err.response?.data?.message || 'Giriş başarısız. Lütfen tekrar deneyin.');
+        setError(err.response?.data?.message || 'Giriş başarısız. Lütfen tekrar deneyin. ');
     } finally {
         setLoading(false);
     }

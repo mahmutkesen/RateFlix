@@ -8,7 +8,7 @@ const Admin = () => {
     const [stats, setStats] = useState({ users: 0, reviews: 0, lists: 0, newReviewsToday: 0 });
     const [users, setUsers] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [activeTab, setActiveTab] = useState('overview'); // 'overview' or 'users'
+    const [activeTab, setActiveTab] = useState('overview'); // 'overview' or 'users' 
     const { showToast } = useToast();
 
     useEffect(() => {

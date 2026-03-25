@@ -72,7 +72,7 @@ const Navbar = () => {
   const handleSearchSubmit = (e) => {
     e.preventDefault();
     if (searchQuery.trim().length > 1) {
-      // Just keep suggestions open, don't navigate
+      // Just keep suggestions open don't navigate
       setShowSuggestions(true);
     }
   };

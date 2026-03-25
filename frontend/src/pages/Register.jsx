@@ -21,7 +21,7 @@ const Register = () => {
         const res = await api.post('/auth/register', { username, email, password });
         if (res.data.message) {
             setError('success:' + res.data.message);
-            // After 5s redirect to login
+            // After 5s  redirect to login
             setTimeout(() => navigate('/login'), 5000);
         } else {
             localStorage.setItem('token', res.data.token);
