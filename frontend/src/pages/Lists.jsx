@@ -323,7 +323,7 @@ const Lists = () => {
                 )}
             </div>
 
-            <ConfirmModal 
+            <ConfirmModal
                 isOpen={confirmDelete.isOpen}
                 title="Listeyi Sil"
                 message="Bu listeyi silmek istediğinize emin misiniz? Bu işlem geri alınamaz."

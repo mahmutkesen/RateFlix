@@ -30,16 +30,16 @@ const Profile = () => {
                 setLoading(false);
                 return;
             }
-            
+
             setLoading(true);
             try {
                 const res = await api.get(`/auth/profile/${targetUserId}`);
                 setProfileData(res.data);
                 setFollowersCount(res.data.user.followers?.length || 0);
-                
+
                 // Check if current user is in the followers array
                 if (myUser && res.data.user.followers) {
-                    const following = res.data.user.followers.some(f => 
+                    const following = res.data.user.followers.some(f =>
                         (f._id || f) === myUser.id
                     );
                     setIsFollowing(following);
@@ -139,7 +139,7 @@ const Profile = () => {
                 <div style={{ width: '100px', height: '100px', borderRadius: '50%', background: 'linear-gradient(135deg, var(--primary-color), #f39c12)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '3rem', color: '#000', fontWeight: 'bold' }}>
                     {user.profilePic ? <img src={user.profilePic} alt={user.username} style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} /> : user.username.charAt(0).toUpperCase()}
                 </div>
-                
+
                 <div style={{ flex: 1 }}>
                     <h1 style={{ fontSize: '2rem', margin: '0 0 0.5rem 0' }}>{user.username}</h1>
                     <div style={{ display: 'flex', gap: '1.5rem', color: 'var(--text-muted)' }}>
@@ -150,18 +150,18 @@ const Profile = () => {
                 </div>
 
                 {!isMyProfile && myUser && (
-                    <button 
+                    <button
                         onClick={handleFollow}
-                        style={{ 
-                            display: 'flex', alignItems: 'center', gap: '0.6rem', 
+                        style={{
+                            display: 'flex', alignItems: 'center', gap: '0.6rem',
                             padding: '0.8rem 1.8rem', borderRadius: '25px', border: 'none', cursor: 'pointer',
                             fontWeight: 700, fontSize: '0.95rem', transition: 'all 0.3s',
-                            background: isFollowing 
-                                ? 'linear-gradient(135deg, #e74c3c, #c0392b)' 
+                            background: isFollowing
+                                ? 'linear-gradient(135deg, #e74c3c, #c0392b)'
                                 : 'linear-gradient(135deg, var(--primary-color), #f39c12)',
                             color: isFollowing ? '#fff' : '#000',
-                            boxShadow: isFollowing 
-                                ? '0 4px 15px rgba(231, 76, 60, 0.4)' 
+                            boxShadow: isFollowing
+                                ? '0 4px 15px rgba(231, 76, 60, 0.4)'
                                 : '0 4px 15px rgba(212, 175, 55, 0.4)',
                         }}
                         className="hover-scale"
@@ -215,69 +215,69 @@ const Profile = () => {
                             {lists.map((list, idx) => {
                                 const listItemColors = ['#ff7675', '#74b9ff', '#55efc4', '#ffeaa7', '#a29bfe', '#fd79a8'];
                                 return (
-                                <div key={list._id} className="glass-panel" style={{ padding: '1.5rem', borderRadius: '12px', transition: 'all 0.3s', backgroundColor: expandedListId === list._id ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.03)' }}>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', cursor: 'pointer' }} onClick={() => toggleList(list._id)}>
-                                        <div>
-                                            <h3 style={{ fontSize: '1.3rem', marginBottom: '0.3rem', color: '#fff' }}>{list.name}</h3>
-                                            <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>{list.items?.length || 0} içerik</p>
-                                            {list.description && (
-                                                <p style={{ color: '#aaa', fontSize: '0.85rem', marginTop: '0.4rem', fontStyle: 'italic' }}>{list.description}</p>
-                                            )}
+                                    <div key={list._id} className="glass-panel" style={{ padding: '1.5rem', borderRadius: '12px', transition: 'all 0.3s', backgroundColor: expandedListId === list._id ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.03)' }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', cursor: 'pointer' }} onClick={() => toggleList(list._id)}>
+                                            <div>
+                                                <h3 style={{ fontSize: '1.3rem', marginBottom: '0.3rem', color: '#fff' }}>{list.name}</h3>
+                                                <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>{list.items?.length || 0} içerik</p>
+                                                {list.description && (
+                                                    <p style={{ color: '#aaa', fontSize: '0.85rem', marginTop: '0.4rem', fontStyle: 'italic' }}>{list.description}</p>
+                                                )}
 
-                                            {/* Unexpanded Preview Row */}
-                                            {expandedListId !== list._id && list.items?.length > 0 && (
-                                                <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem', overflow: 'hidden' }}>
-                                                    {list.items.slice(0, 5).map((item, i) => (
-                                                        <div key={i} style={{ flexShrink: 0 }}>
-                                                            {item.posterPath ? (
-                                                                <img src={getImageUrl(item.posterPath, 'w92')} alt={item.title} style={{ width: '40px', height: '60px', objectFit: 'cover', borderRadius: '4px', border: '1px solid rgba(255,255,255,0.1)' }} />
-                                                            ) : (
-                                                                <div style={{ width: '40px', height: '60px', background: 'rgba(255,255,255,0.1)', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                                                    <FaFilm size={12} color="var(--text-muted)" />
-                                                                </div>
-                                                            )}
-                                                        </div>
-                                                    ))}
-                                                    {list.items.length > 5 && (
-                                                        <div style={{ width: '40px', height: '60px', background: 'rgba(255,255,255,0.1)', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8rem', fontWeight: 'bold', border: '1px solid rgba(255,255,255,0.1)' }}>+{list.items.length - 5}</div>
-                                                    )}
-                                                </div>
-                                            )}
-                                        </div>
-                                        <div style={{ color: 'var(--text-muted)', fontSize: '1.2rem', padding: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                            {(isMyProfile || myUser?.role === 'admin') && !['favorites', 'watchlist', 'watched'].includes(list.type) && (
-                                                <button 
-                                                    onClick={(e) => { e.stopPropagation(); handleDeleteList(list._id); }} 
-                                                    style={{ background: 'none', border: 'none', color: '#ff7675', cursor: 'pointer', fontSize: '0.9rem' }}
-                                                    title="Listeyi Sil"
-                                                >
-                                                    <FaTrash />
-                                                </button>
-                                            )}
-                                            {expandedListId === list._id ? <FaChevronUp /> : <FaChevronDown />}
-                                        </div>
-                                    </div>
-
-                                    {/* Expanded Content View */}
-                                    {expandedListId === list._id && (
-                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))', gap: '1rem', marginTop: '1.5rem', paddingTop: '1.5rem', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
-                                            {list.items?.length > 0 ? (
-                                                list.items.map(item => (
-                                                    <Link to={`/${item.mediaType || 'movie'}/${item.tmdbId}`} key={item.tmdbId} style={{ textDecoration: 'none', color: '#fff', textAlign: 'center' }} className="hover-scale">
-                                                        {item.posterPath ? (
-                                                            <img src={getImageUrl(item.posterPath, 'w200')} alt={item.title} style={{ width: '100%', borderRadius: '8px', marginBottom: '0.5rem' }} />
-                                                        ) : (
-                                                            <div style={{ width: '100%', aspectRatio: '2/3', background: 'rgba(255,255,255,0.1)', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '0.5rem' }}><FaFilm /></div>
+                                                {/* Unexpanded Preview Row */}
+                                                {expandedListId !== list._id && list.items?.length > 0 && (
+                                                    <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem', overflow: 'hidden' }}>
+                                                        {list.items.slice(0, 5).map((item, i) => (
+                                                            <div key={i} style={{ flexShrink: 0 }}>
+                                                                {item.posterPath ? (
+                                                                    <img src={getImageUrl(item.posterPath, 'w92')} alt={item.title} style={{ width: '40px', height: '60px', objectFit: 'cover', borderRadius: '4px', border: '1px solid rgba(255,255,255,0.1)' }} />
+                                                                ) : (
+                                                                    <div style={{ width: '40px', height: '60px', background: 'rgba(255,255,255,0.1)', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                                        <FaFilm size={12} color="var(--text-muted)" />
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        ))}
+                                                        {list.items.length > 5 && (
+                                                            <div style={{ width: '40px', height: '60px', background: 'rgba(255,255,255,0.1)', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8rem', fontWeight: 'bold', border: '1px solid rgba(255,255,255,0.1)' }}>+{list.items.length - 5}</div>
                                                         )}
-                                                        <div style={{ fontSize: '0.8rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.title}</div>
-                                                    </Link>
-                                                ))
-                                            ) : (
-                                                <div style={{ gridColumn: '1 / -1', textAlign: 'center', color: 'var(--text-muted)', padding: '1rem 0' }}>Bu listede henüz içerik yok.</div>
-                                            )}
+                                                    </div>
+                                                )}
+                                            </div>
+                                            <div style={{ color: 'var(--text-muted)', fontSize: '1.2rem', padding: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                {(isMyProfile || myUser?.role === 'admin') && !['favorites', 'watchlist', 'watched'].includes(list.type) && (
+                                                    <button
+                                                        onClick={(e) => { e.stopPropagation(); handleDeleteList(list._id); }}
+                                                        style={{ background: 'none', border: 'none', color: '#ff7675', cursor: 'pointer', fontSize: '0.9rem' }}
+                                                        title="Listeyi Sil"
+                                                    >
+                                                        <FaTrash />
+                                                    </button>
+                                                )}
+                                                {expandedListId === list._id ? <FaChevronUp /> : <FaChevronDown />}
+                                            </div>
                                         </div>
-                                    )}
-                                </div>
+
+                                        {/* Expanded Content View */}
+                                        {expandedListId === list._id && (
+                                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))', gap: '1rem', marginTop: '1.5rem', paddingTop: '1.5rem', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+                                                {list.items?.length > 0 ? (
+                                                    list.items.map(item => (
+                                                        <Link to={`/${item.mediaType || 'movie'}/${item.tmdbId}`} key={item.tmdbId} style={{ textDecoration: 'none', color: '#fff', textAlign: 'center' }} className="hover-scale">
+                                                            {item.posterPath ? (
+                                                                <img src={getImageUrl(item.posterPath, 'w200')} alt={item.title} style={{ width: '100%', borderRadius: '8px', marginBottom: '0.5rem' }} />
+                                                            ) : (
+                                                                <div style={{ width: '100%', aspectRatio: '2/3', background: 'rgba(255,255,255,0.1)', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '0.5rem' }}><FaFilm /></div>
+                                                            )}
+                                                            <div style={{ fontSize: '0.8rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.title}</div>
+                                                        </Link>
+                                                    ))
+                                                ) : (
+                                                    <div style={{ gridColumn: '1 / -1', textAlign: 'center', color: 'var(--text-muted)', padding: '1rem 0' }}>Bu listede henüz içerik yok.</div>
+                                                )}
+                                            </div>
+                                        )}
+                                    </div>
                                 );
                             })}
                         </div>
@@ -287,7 +287,7 @@ const Profile = () => {
                 </section>
             </div>
 
-            <ConfirmModal 
+            <ConfirmModal
                 isOpen={confirmDelete.isOpen}
                 title={confirmDelete.type === 'review' ? "İncelemeyi Sil" : "Listeyi Sil"}
                 message="Bunu kalıcı olarak silmek istediğinize emin misiniz?"

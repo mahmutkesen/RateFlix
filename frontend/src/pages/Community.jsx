@@ -18,7 +18,7 @@ const Community = () => {
     const [myUser, setMyUser] = useState(JSON.parse(localStorage.getItem('user') || 'null'));
     const [confirmDelete, setConfirmDelete] = useState({ isOpen: false, type: null, id: null, targetId: null });
     const { showToast } = useToast();
-    
+
     // New states for Tab and Expansion logic
     const [activeTab, setActiveTab] = useState('reviews');
     const [expandedListId, setExpandedListId] = useState(null);
@@ -106,7 +106,7 @@ const Community = () => {
     const toggleComments = async (targetId) => {
         const isExpanded = !expandedComments[targetId];
         setExpandedComments(prev => ({ ...prev, [targetId]: isExpanded }));
-        
+
         if (isExpanded && (!comments[targetId] || comments[targetId].length === 0)) {
             fetchComments(targetId);
         }
@@ -150,14 +150,14 @@ const Community = () => {
             const res = await api.post(`/comments/${commentId}/${type}`);
             setComments(prev => ({
                 ...prev,
-                [targetId]: prev[targetId].map(c => 
-                    c._id === commentId 
-                    ? { 
-                        ...c, 
-                        likes: res.data.liked ? [...c.likes, myUser.id] : c.likes.filter(id => id.toString() !== myUser.id),
-                        dislikes: res.data.disliked ? [...c.dislikes, myUser.id] : c.dislikes.filter(id => id.toString() !== myUser.id)
-                      } 
-                    : c
+                [targetId]: prev[targetId].map(c =>
+                    c._id === commentId
+                        ? {
+                            ...c,
+                            likes: res.data.liked ? [...c.likes, myUser.id] : c.likes.filter(id => id.toString() !== myUser.id),
+                            dislikes: res.data.disliked ? [...c.dislikes, myUser.id] : c.dislikes.filter(id => id.toString() !== myUser.id)
+                        }
+                        : c
                 )
             }));
         } catch (err) {
@@ -178,7 +178,7 @@ const Community = () => {
         return (
             <div className={`comment-section ${isExpanded ? 'active' : ''}`}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', marginTop: '0.5rem' }}>
-                    <button 
+                    <button
                         onClick={() => toggleComments(targetId)}
                         className="comment-toggle-btn"
                     >
@@ -192,9 +192,9 @@ const Community = () => {
                         {/* Add Comment Input */}
                         {myUser && (
                             <form onSubmit={(e) => handleCommentSubmit(e, targetId, targetType)} className="comment-form">
-                                <input 
-                                    type="text" 
-                                    placeholder="Bir yorum yaz..." 
+                                <input
+                                    type="text"
+                                    placeholder="Bir yorum yaz..."
                                     value={commentText[targetId] || ''}
                                     onChange={(e) => setCommentText(prev => ({ ...prev, [targetId]: e.target.value }))}
                                     maxLength="500"
@@ -234,13 +234,13 @@ const Community = () => {
                                                 <p className="comment-content">{c.content}</p>
                                                 <div className="comment-actions">
                                                     <div className="comment-reactions">
-                                                        <button 
+                                                        <button
                                                             onClick={() => handleCommentReaction(c._id, 'like', targetId)}
                                                             className={liked ? 'active-like' : ''}
                                                         >
                                                             <FaThumbsUp size={10} /> {c.likes?.length || 0}
                                                         </button>
-                                                        <button 
+                                                        <button
                                                             onClick={() => handleCommentReaction(c._id, 'dislike', targetId)}
                                                             className={disliked ? 'active-dislike' : ''}
                                                         >
@@ -281,13 +281,13 @@ const Community = () => {
 
             {/* Tab Navigation */}
             <div style={{ display: 'flex', justifyContent: 'center', gap: '1rem', marginBottom: '2.5rem' }}>
-                <button 
+                <button
                     onClick={() => setActiveTab('reviews')}
-                    style={{ 
-                        background: activeTab === 'reviews' ? 'linear-gradient(135deg, var(--primary-color), #f39c12)' : 'rgba(255,255,255,0.05)', 
-                        border: '1px solid rgba(255,255,255,0.1)', 
-                        padding: '0.8rem 2.5rem', 
-                        borderRadius: '30px', 
+                    style={{
+                        background: activeTab === 'reviews' ? 'linear-gradient(135deg, var(--primary-color), #f39c12)' : 'rgba(255,255,255,0.05)',
+                        border: '1px solid rgba(255,255,255,0.1)',
+                        padding: '0.8rem 2.5rem',
+                        borderRadius: '30px',
                         color: activeTab === 'reviews' ? '#000' : 'var(--text-muted)',
                         fontSize: '1.2rem', fontWeight: 600, cursor: 'pointer',
                         display: 'flex', alignItems: 'center', gap: '0.8rem', transition: 'all 0.3s',
@@ -297,12 +297,12 @@ const Community = () => {
                 >
                     <FaStar /> Son İncelemeler
                 </button>
-                <button 
+                <button
                     onClick={() => setActiveTab('lists')}
-                    style={{ 
-                        background: activeTab === 'lists' ? 'linear-gradient(135deg, var(--primary-color), #f39c12)' : 'rgba(255,255,255,0.05)', 
-                        border: '1px solid rgba(255,255,255,0.1)', 
-                        padding: '0.8rem 2.5rem', 
+                    style={{
+                        background: activeTab === 'lists' ? 'linear-gradient(135deg, var(--primary-color), #f39c12)' : 'rgba(255,255,255,0.05)',
+                        border: '1px solid rgba(255,255,255,0.1)',
+                        padding: '0.8rem 2.5rem',
                         borderRadius: '30px',
                         color: activeTab === 'lists' ? '#000' : 'var(--text-muted)',
                         fontSize: '1.2rem', fontWeight: 600, cursor: 'pointer',
@@ -316,7 +316,7 @@ const Community = () => {
             </div>
 
             <div style={{ maxWidth: '800px', margin: '0 auto' }}>
-                
+
                 {/* Son İncelemeler */}
                 {activeTab === 'reviews' && (
                     <section className="animate-fade-in">
@@ -332,9 +332,9 @@ const Community = () => {
                                             {/* Poster */}
                                             <Link to={`/${review.mediaType}/${review.tmdbId}`} style={{ flexShrink: 0 }}>
                                                 {review.posterPath ? (
-                                                    <img 
-                                                        src={getImageUrl(review.posterPath, 'w200')} 
-                                                        alt={review.movieTitle} 
+                                                    <img
+                                                        src={getImageUrl(review.posterPath, 'w200')}
+                                                        alt={review.movieTitle}
                                                         style={{ width: '80px', borderRadius: '8px', objectFit: 'cover' }}
                                                     />
                                                 ) : (
@@ -343,7 +343,7 @@ const Community = () => {
                                                     </div>
                                                 )}
                                             </Link>
-                                            
+
                                             {/* İçerik */}
                                             <div style={{ flex: 1 }}>
                                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.5rem' }}>
@@ -362,15 +362,15 @@ const Community = () => {
                                                     </div>
                                                     <RatingStars rating={review.rating} readonly />
                                                 </div>
-                                                
+
                                                 <p style={{ color: '#ccc', fontStyle: 'italic', fontSize: '0.95rem', margin: '0.8rem 0' }}>
                                                     "{review.reviewText || 'Sadece puan verdi.'}"
                                                 </p>
-                                                                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '1rem', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '1rem', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
                                                     <span><FaClock style={{ marginRight: '0.3rem' }} /> {new Date(review.createdAt).toLocaleDateString('tr-TR')}</span>
                                                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                                                         {/* Like Button */}
-                                                        <button 
+                                                        <button
                                                             onClick={async (e) => {
                                                                 e.preventDefault(); e.stopPropagation();
                                                                 if (!myUser) return showToast('Beğenmek için giriş yapmalısınız.', 'error');
@@ -383,7 +383,7 @@ const Community = () => {
                                                             <FaThumbsUp size={11} /> {reactions[review._id]?.likes || 0}
                                                         </button>
                                                         {/* Dislike Button */}
-                                                        <button 
+                                                        <button
                                                             onClick={async (e) => {
                                                                 e.preventDefault(); e.stopPropagation();
                                                                 if (!myUser) return showToast('Giriş yapmalısınız.', 'error');
@@ -426,7 +426,7 @@ const Community = () => {
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                                 {lists.map((list, idx) => (
                                     <div key={list._id} className="glass-panel" style={{ padding: '1.5rem', borderRadius: '12px', transition: 'all 0.3s', backgroundColor: expandedListId === list._id ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.03)' }}>
-                                        <div 
+                                        <div
                                             style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', cursor: 'pointer' }}
                                             onClick={() => toggleList(list._id)}
                                         >
@@ -452,14 +452,14 @@ const Community = () => {
                                                     <p style={{ color: '#aaa', fontSize: '0.85rem', marginTop: '0.4rem', fontStyle: 'italic' }}>{list.description}</p>
                                                 )}
                                                 {myUser && (myUser.id === list.user?._id || myUser.id === list.user || myUser.role === 'admin') && !['favorites', 'watchlist', 'watched'].includes(list.type) && (
-                                                    <button 
-                                                        onClick={(e) => { e.stopPropagation(); handleDeleteList(list._id); }} 
+                                                    <button
+                                                        onClick={(e) => { e.stopPropagation(); handleDeleteList(list._id); }}
                                                         style={{ background: 'none', border: 'none', color: '#ff7675', cursor: 'pointer', fontSize: '0.8rem', marginTop: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}
                                                     >
                                                         <FaTrash size={10} /> Listeyi Sil
                                                     </button>
                                                 )}
-                                                
+
                                                 {/* Unexpanded Preview Row */}
                                                 {expandedListId !== list._id && list.items?.length > 0 && (
                                                     <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem', overflow: 'hidden' }}>
@@ -493,7 +493,7 @@ const Community = () => {
                                                         setReactions(r => ({ ...r, [list._id]: { ...prev, likes: prev.liked ? prev.likes - 1 : prev.likes + 1, dislikes: prev.disliked ? prev.dislikes - 1 : prev.dislikes, liked: !prev.liked, disliked: false } }));
                                                         try { await api.post(`/lists/${list._id}/like`); } catch { setReactions(r => ({ ...r, [list._id]: prev })); }
                                                     }}
-                                                    style={{ background: reactions[list._id]?.liked ? 'rgba(46, 213, 115, 0.2)' : 'rgba(255,255,255,0.05)', border: `1px solid ${reactions[list._id]?.liked ? '#2ed573' : 'rgba(255,255,255,0.1)'}`, color: reactions[list._id]?.liked ? '#2ed573' : 'var(--text-muted)', borderRadius: '20px', padding: '4px 10px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', transition: 'all 0.2s', fontSize: '0.75rem' }}>
+                                                        style={{ background: reactions[list._id]?.liked ? 'rgba(46, 213, 115, 0.2)' : 'rgba(255,255,255,0.05)', border: `1px solid ${reactions[list._id]?.liked ? '#2ed573' : 'rgba(255,255,255,0.1)'}`, color: reactions[list._id]?.liked ? '#2ed573' : 'var(--text-muted)', borderRadius: '20px', padding: '4px 10px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', transition: 'all 0.2s', fontSize: '0.75rem' }}>
                                                         <FaThumbsUp size={10} /> {reactions[list._id]?.likes || 0}
                                                     </button>
                                                     <button onClick={async (e) => {
@@ -503,7 +503,7 @@ const Community = () => {
                                                         setReactions(r => ({ ...r, [list._id]: { ...prev, dislikes: prev.disliked ? prev.dislikes - 1 : prev.dislikes + 1, likes: prev.liked ? prev.likes - 1 : prev.likes, liked: false, disliked: !prev.disliked } }));
                                                         try { await api.post(`/lists/${list._id}/dislike`); } catch { setReactions(r => ({ ...r, [list._id]: prev })); }
                                                     }}
-                                                    style={{ background: reactions[list._id]?.disliked ? 'rgba(255, 118, 117, 0.2)' : 'rgba(255,255,255,0.05)', border: `1px solid ${reactions[list._id]?.disliked ? '#ff7675' : 'rgba(255,255,255,0.1)'}`, color: reactions[list._id]?.disliked ? '#ff7675' : 'var(--text-muted)', borderRadius: '20px', padding: '4px 10px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', transition: 'all 0.2s', fontSize: '0.75rem' }}>
+                                                        style={{ background: reactions[list._id]?.disliked ? 'rgba(255, 118, 117, 0.2)' : 'rgba(255,255,255,0.05)', border: `1px solid ${reactions[list._id]?.disliked ? '#ff7675' : 'rgba(255,255,255,0.1)'}`, color: reactions[list._id]?.disliked ? '#ff7675' : 'var(--text-muted)', borderRadius: '20px', padding: '4px 10px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', transition: 'all 0.2s', fontSize: '0.75rem' }}>
                                                         <FaThumbsDown size={10} /> {reactions[list._id]?.dislikes || 0}
                                                     </button>
                                                 </div>
@@ -548,7 +548,7 @@ const Community = () => {
 
             </div>
 
-            <ConfirmModal 
+            <ConfirmModal
                 isOpen={confirmDelete.isOpen}
                 title={confirmDelete.type === 'review' ? "İncelemeyi Sil" : confirmDelete.type === 'list' ? "Listeyi Sil" : "Yorumu Sil"}
                 message="Bunu kalıcı olarak silmek istediğinize emin misiniz?"
