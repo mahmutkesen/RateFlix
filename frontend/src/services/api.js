@@ -2,6 +2,24 @@ import axios from 'axios';
 
 const api = axios.create({
     baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5000/api', // Backend URL
+    timeout: 60000, // Extend timeout to 60 seconds for Render cold starts
+});
+
+// Retry Interceptor for Render Free Tier (Cold Start)
+api.interceptors.response.use(undefined, async (err) => {
+    const { config, response } = err;
+    if (!config || !config.retry || response?.status !== 503) {
+        if (config && (response?.status === 503 || err.code === 'ECONNABORTED')) {
+            config.retry = (config.retry || 0) + 1;
+            if (config.retry <= 3) {
+                console.log(`Render is waking up... Retry attempt ${config.retry}`);
+                await new Promise(resolve => setTimeout(resolve, 3000)); // Wait 3 seconds
+                return api(config);
+            }
+        }
+        return Promise.reject(err);
+    }
+    return Promise.reject(err);
 });
 
 // Simple Get Request Cache (30 seconds)
