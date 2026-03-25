@@ -19,9 +19,9 @@ services:
       - key: EMAIL_PASS
         sync: false
 
-  # Frontend Service
-  - type: static
-    name: rateflix-frontend
+# Frontend Service
+staticSites:
+  - name: rateflix-frontend
     env: static
     plan: free
     rootDir: frontend
