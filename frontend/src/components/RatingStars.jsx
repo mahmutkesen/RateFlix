@@ -28,10 +28,10 @@ const RatingStars = ({ rating, onChange, readonly = false }) => {
         }
 
         stars.push(
-            <div 
-                key={i} 
-                style={{ 
-                    position: 'relative', 
+            <div
+                key={i}
+                style={{
+                    position: 'relative',
                     display: 'inline-block',
                     cursor: readonly ? 'default' : 'pointer'
                 }}
@@ -39,7 +39,7 @@ const RatingStars = ({ rating, onChange, readonly = false }) => {
             >
                 {/* Left Half (invisible trigger) */}
                 {!readonly && (
-                    <div 
+                    <div
                         style={{ position: 'absolute', top: 0, left: 0, width: '50%', height: '100%', zIndex: 2 }}
                         onMouseEnter={() => setHover(halfStarValue)}
                         onClick={() => handleRating(halfStarValue)}
@@ -47,14 +47,14 @@ const RatingStars = ({ rating, onChange, readonly = false }) => {
                 )}
                 {/* Right Half (invisible trigger) */}
                 {!readonly && (
-                    <div 
+                    <div
                         style={{ position: 'absolute', top: 0, right: 0, width: '50%', height: '100%', zIndex: 2 }}
                         onMouseEnter={() => setHover(starValue)}
                         onClick={() => handleRating(starValue)}
                     />
                 )}
-                
-                <Icon 
+
+                <Icon
                     size={28}
                     color={displayRating >= halfStarValue ? '#fbbf24' : '#475569'}
                     style={{ transition: 'color 0.2s ease', display: 'block' }}

@@ -9,10 +9,10 @@ const MovieSlider = ({ title, items, type }) => {
     const scroll = (direction) => {
         if (sliderRef.current) {
             const { scrollLeft, clientWidth } = sliderRef.current;
-            const scrollTo = direction === 'left' 
-                ? scrollLeft - clientWidth * 0.8 
+            const scrollTo = direction === 'left'
+                ? scrollLeft - clientWidth * 0.8
                 : scrollLeft + clientWidth * 0.8;
-            
+
             sliderRef.current.scrollTo({
                 left: scrollTo,
                 behavior: 'smooth'
@@ -35,7 +35,7 @@ const MovieSlider = ({ title, items, type }) => {
                     </button>
                 </div>
             </div>
-            
+
             <div className="slider-container" ref={sliderRef}>
                 <div className="slider-track">
                     {items.map((item) => (

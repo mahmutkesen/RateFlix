@@ -60,24 +60,24 @@ const MovieCard = ({ item, type }) => {
     return (
         <Link to={`/${type}/${item.id}`} className="movie-card">
             <div className="card-image-wrapper">
-                 <img 
-                    src={getImageUrl(item.poster_path)} 
-                    alt={item.title || item.name} 
+                <img
+                    src={getImageUrl(item.poster_path)}
+                    alt={item.title || item.name}
                     className="card-image"
                     loading="lazy"
-                 />
-                 <div className="card-overlay">
-                      <div className="badges-stack">
-                          <span className="rating-badge tmdb">
-                              <FaStar className="star-icon" />
-                              {item.vote_average?.toFixed(1) || '0.0'}
-                          </span>
-                          <span className="rating-badge rateflix">
-                              <div className="rf-logo-small">R</div>
-                              {rateflixRating.toFixed(1)}
-                          </span>
-                      </div>
-                 </div>
+                />
+                <div className="card-overlay">
+                    <div className="badges-stack">
+                        <span className="rating-badge tmdb">
+                            <FaStar className="star-icon" />
+                            {item.vote_average?.toFixed(1) || '0.0'}
+                        </span>
+                        <span className="rating-badge rateflix">
+                            <div className="rf-logo-small">R</div>
+                            {rateflixRating.toFixed(1)}
+                        </span>
+                    </div>
+                </div>
             </div>
             <div className="card-content" style={{ position: 'relative' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.25rem' }}>
@@ -86,10 +86,10 @@ const MovieCard = ({ item, type }) => {
                     </h3>
                     {token && (
                         <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-                            <button 
+                            <button
                                 onClick={handleListClick}
-                                style={{ 
-                                    background: 'rgba(255,255,255,0.1)', border: 'none', color: 'var(--primary-color)', 
+                                style={{
+                                    background: 'rgba(255,255,255,0.1)', border: 'none', color: 'var(--primary-color)',
                                     width: '24px', height: '24px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
                                     cursor: 'pointer', flexShrink: 0, marginLeft: '0.5rem', transition: 'background 0.3s'
                                 }}
@@ -101,11 +101,11 @@ const MovieCard = ({ item, type }) => {
 
                             {/* Dropdown Menu - Expanding Upwards */}
                             {showListMenu && (
-                                <div className="glass-panel animate-slide-in" style={{ 
-                                    position: 'absolute', 
-                                    bottom: '100%', 
-                                    right: 0, 
-                                    marginBottom: '10px', 
+                                <div className="glass-panel animate-slide-in" style={{
+                                    position: 'absolute',
+                                    bottom: '100%',
+                                    right: 0,
+                                    marginBottom: '10px',
                                     zIndex: 100,
                                     minWidth: '180px',
                                     padding: '8px',
@@ -121,29 +121,29 @@ const MovieCard = ({ item, type }) => {
                                         <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', padding: '5px' }}>Yükleniyor...</div>
                                     ) : (
                                         userLists
-                                        .sort((a,b) => {
-                                            const order = { 'watched': 1, 'watchlist': 2, 'favorites': 3, 'custom': 4 };
-                                            return (order[a.type] || 5) - (order[b.type] || 5);
-                                        })
-                                        .map(list => {
-                                           const listNameMapping = { 'watchlist': 'İzleyeceklerim', 'watched': 'İzlediklerim', 'favorites': 'Favorilerim' };
-                                           const iconMapping = { 'watchlist': <FaEye />, 'watched': <FaCheck />, 'favorites': <FaHeart /> };
-                                           return (
-                                               <button
-                                                   key={list._id}
-                                                   onClick={(e) => handleAddToList(e, list._id, listNameMapping[list.type] || list.name)}
-                                                   style={{
-                                                       width: '100%', padding: '8px', textAlign: 'left', background: 'none', border: 'none', color: '#fff', cursor: 'pointer', borderRadius: '4px', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '8px'
-                                                   }}
-                                                   className="list-item-hover"
-                                               >
-                                                   <span style={{ color: list.type === 'favorites' ? '#e74c3c' : (list.type === 'watched' ? '#2ecc71' : 'var(--primary-color)') }}>
-                                                       {iconMapping[list.type] || <FaList />}
-                                                   </span>
-                                                   <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{listNameMapping[list.type] || list.name}</span>
-                                               </button>
-                                           );
-                                        })
+                                            .sort((a, b) => {
+                                                const order = { 'watched': 1, 'watchlist': 2, 'favorites': 3, 'custom': 4 };
+                                                return (order[a.type] || 5) - (order[b.type] || 5);
+                                            })
+                                            .map(list => {
+                                                const listNameMapping = { 'watchlist': 'İzleyeceklerim', 'watched': 'İzlediklerim', 'favorites': 'Favorilerim' };
+                                                const iconMapping = { 'watchlist': <FaEye />, 'watched': <FaCheck />, 'favorites': <FaHeart /> };
+                                                return (
+                                                    <button
+                                                        key={list._id}
+                                                        onClick={(e) => handleAddToList(e, list._id, listNameMapping[list.type] || list.name)}
+                                                        style={{
+                                                            width: '100%', padding: '8px', textAlign: 'left', background: 'none', border: 'none', color: '#fff', cursor: 'pointer', borderRadius: '4px', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '8px'
+                                                        }}
+                                                        className="list-item-hover"
+                                                    >
+                                                        <span style={{ color: list.type === 'favorites' ? '#e74c3c' : (list.type === 'watched' ? '#2ecc71' : 'var(--primary-color)') }}>
+                                                            {iconMapping[list.type] || <FaList />}
+                                                        </span>
+                                                        <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{listNameMapping[list.type] || list.name}</span>
+                                                    </button>
+                                                );
+                                            })
                                     )}
                                 </div>
                             )}
