@@ -10,7 +10,7 @@ exports.getStats = async (req, res) => {
         const userCount = await User.countDocuments();
         const reviewCount = await Review.countDocuments();
         const listCount = await List.countDocuments();
-        
+         
         res.json({
             users: userCount,
             reviews: reviewCount,

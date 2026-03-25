@@ -21,7 +21,7 @@ const Search = () => {
             setSearched(false);
             return;
         }
-
+ 
         setLoading(true);
         setSearched(true);
         try {

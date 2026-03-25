@@ -11,7 +11,7 @@ const adminCheck = (req, res, next) => {
         res.status(403).json({ message: 'Access denied. Admin only.' });
     }
 };
-
+ 
 // All routes here are protected and admin only
 router.use(auth);
 router.use(adminCheck);
