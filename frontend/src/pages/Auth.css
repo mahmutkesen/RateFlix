@@ -198,3 +198,12 @@
     margin-bottom: 1.5rem;
     animation: fadeIn 0.3s ease;
 }
+@media (max-width: 480px) {
+    .auth-card {
+        padding: 2rem 1.5rem;
+        border-radius: 20px;
+    }
+    .auth-title { font-size: 1.8rem; }
+    .auth-subtitle { font-size: 0.85rem; }
+    .auth-container { padding: 1rem; }
+}

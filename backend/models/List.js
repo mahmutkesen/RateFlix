@@ -45,4 +45,7 @@ const ListSchema = new mongoose.Schema({
     dislikes: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }]
 }, { timestamps: true });
 
+ListSchema.index({ user: 1 });
+ListSchema.index({ type: 1 }); // Useful for filtering default lists
+
 module.exports = mongoose.model('List', ListSchema);

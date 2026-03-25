@@ -251,6 +251,7 @@
   left: 50%;
   transform: translateX(-50%);
   width: 320px;
+  max-width: 90vw;
   padding: 1.5rem;
   background: rgba(10, 10, 10, 0.95);
   border-radius: 20px;
@@ -319,21 +320,76 @@
   gap: 0.5rem;
 }
 
-@media (max-width: 1200px) {
-  .brand-text { display: none; }
-  .nav-search-container { max-width: 350px; }
+/* Mobile Menu Toggle */
+.mobile-menu-toggle {
+  display: none;
+  background: none;
+  border: none;
+  color: var(--primary-color);
+  font-size: 1.5rem;
+  cursor: pointer;
+  padding: 0.5rem;
+  z-index: 1001;
 }
 
-@media (max-width: 1000px) {
-  .nav-search-container { max-width: 250px; }
-  .nav-links { gap: 1rem; }
+@media (max-width: 1200px) {
+  .brand-text { display: none; }
+  .nav-search-container { max-width: 320px; }
 }
 
 @media (max-width: 850px) {
-  .nav-search-container { display: none; }
+  .mobile-menu-toggle {
+    display: block;
+  }
+
+  .nav-search-container {
+    max-width: 180px;
+    margin-right: 1rem;
+  }
+
+  .nav-links {
+    position: fixed;
+    top: 80px;
+    left: 0;
+    right: 0;
+    background: rgba(10, 10, 10, 0.98);
+    backdrop-filter: blur(20px);
+    flex-direction: column;
+    padding: 2rem;
+    gap: 1.5rem;
+    height: auto;
+    border-bottom: 1px solid rgba(212, 175, 55, 0.2);
+    transform: translateY(-120%);
+    transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 999;
+    margin-left: 0;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+  }
+
+  .nav-links.mobile-active {
+    transform: translateY(0);
+  }
+
+  .auth-nav {
+    flex-direction: column;
+    width: 100%;
+    margin-left: 0;
+    padding-top: 1rem;
+    border-top: 1px solid rgba(255,255,255,0.05);
+  }
+
+  .dropdown-menu {
+    position: static;
+    transform: none;
+    width: 100%;
+    background: rgba(255,255,255,0.03);
+    margin-top: 0.5rem;
+    box-shadow: none;
+  }
 }
 
-@media (max-width: 600px) {
-  .nav-links .nav-item:not(.btn-primary) { display: none; }
-  .dropdown { display: none; }
+@media (max-width: 500px) {
+  .nav-search-container {
+    display: none;
+  }
 }

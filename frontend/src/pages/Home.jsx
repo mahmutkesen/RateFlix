@@ -32,15 +32,15 @@ const Home = () => {
         const fetchAllContent = async () => {
              setLoading(true);
              try {
-                // Fetch Trending Movies & Series
-                const trM = await Promise.all([1, 2, 3].map(p => safeFetch(getTrending('movie', 'week', p))));
-                const trS = await Promise.all([1, 2, 3].map(p => safeFetch(getTrending('tv', 'week', p))));
+                // Fetch Trending Movies & Series (Reduced from 3 pages to 1 for performance)
+                const trM = await Promise.all([1].map(p => safeFetch(getTrending('movie', 'week', p))));
+                const trS = await Promise.all([1].map(p => safeFetch(getTrending('tv', 'week', p))));
                 setTrendingMovies(extractResults(trM));
                 setTrendingSeries(extractResults(trS));
 
                 // Fetch TMDB Top Rated (Base data)
-                const topM = await Promise.all([1, 2, 3].map(p => safeFetch(getTopRated('movie', p))));
-                const topS = await Promise.all([1, 2, 3].map(p => safeFetch(getTopRated('tv', p))));
+                const topM = await Promise.all([1].map(p => safeFetch(getTopRated('movie', p))));
+                const topS = await Promise.all([1].map(p => safeFetch(getTopRated('tv', p))));
                 
                 let finalMovies = extractResults(topM);
                 let finalSeries = extractResults(topS);
@@ -53,8 +53,9 @@ const Home = () => {
                     ]);
 
                     if (rfTopM.data.length > 0 || rfTopS.data.length > 0) {
-                        const rfMovieDetails = await Promise.all(rfTopM.data.map(item => getDetails('movie', item.tmdbId).catch(() => null)));
-                        const rfTvDetails = await Promise.all(rfTopS.data.map(item => getDetails('tv', item.tmdbId).catch(() => null)));
+                        // Limit to top 10 from RateFlix to avoid excessive TMDB calls
+                        const rfMovieDetails = await Promise.all(rfTopM.data.slice(0, 10).map(item => getDetails('movie', item.tmdbId).catch(() => null)));
+                        const rfTvDetails = await Promise.all(rfTopS.data.slice(0, 10).map(item => getDetails('tv', item.tmdbId).catch(() => null)));
 
                         const mergeTopRated = (rfDetailsItems, tmdbItems) => {
                             const rfData = rfDetailsItems.filter(r => r && r.data).map(r => r.data);

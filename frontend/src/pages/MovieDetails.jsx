@@ -19,6 +19,8 @@ const MovieDetails = ({ type }) => {
     const { userLists } = useUserLists();
     const [showListMenu, setShowListMenu] = useState(false);
     const [confirmDelete, setConfirmDelete] = useState({ isOpen: false, reviewId: null });
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isAddingToList, setIsAddingToList] = useState(false);
     const token = localStorage.getItem('token');
     const { showToast } = useToast();
 
@@ -57,6 +59,8 @@ const MovieDetails = ({ type }) => {
 
     const handleRatingSubmit = async (e) => {
         e.preventDefault();
+        if (isSubmitting) return;
+        setIsSubmitting(true);
         try {
             await api.post('/reviews', {
                 tmdbId: id,
@@ -71,10 +75,14 @@ const MovieDetails = ({ type }) => {
         } catch (err) {
             showToast('İnceleme gönderilirken hata oluştu', 'error');
             console.error(err);
+        } finally {
+            setIsSubmitting(false);
         }
     };
 
     const handleAddToList = async (listId, listName) => {
+        if (isAddingToList) return;
+        setIsAddingToList(true);
         try {
             await api.post(`/lists/${listId}/items`, {
                 tmdbId: id,
@@ -85,6 +93,8 @@ const MovieDetails = ({ type }) => {
             setShowListMenu(false);
         } catch (err) {
             showToast('İçerik zaten bu listede', 'error');
+        } finally {
+            setIsAddingToList(false);
         }
     };
 
@@ -251,8 +261,8 @@ const MovieDetails = ({ type }) => {
                                     placeholder="Düşüncelerinizi yazın..."
                                 ></textarea>
                             </div>
-                            <button type="submit" className="btn-primary" disabled={myRating === 0} title={myRating === 0 ? "Lütfen önce yıldızlara tıklayarak puan verin" : ""}>
-                                {myRating === 0 ? "Puan Vererek Gönder" : "İncelemeyi Gönder"}
+                            <button type="submit" className="btn-primary" disabled={myRating === 0 || isSubmitting} title={myRating === 0 ? "Lütfen önce yıldızlara tıklayarak puan verin" : ""}>
+                                {isSubmitting ? "Gönderiliyor..." : (myRating === 0 ? "Puan Vererek Gönder" : "İncelemeyi Gönder")}
                             </button>
                         </form>
                     ) : (

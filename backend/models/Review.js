@@ -40,4 +40,9 @@ const ReviewSchema = new mongoose.Schema({
 // Ensure a user can only review a specific media item once
 ReviewSchema.index({ user: 1, tmdbId: 1, mediaType: 1 }, { unique: true });
 
+// Standalone indexes for common queries
+ReviewSchema.index({ tmdbId: 1, mediaType: 1 });
+ReviewSchema.index({ user: 1 });
+ReviewSchema.index({ createdAt: -1 }); // For landing page/community feeds
+
 module.exports = mongoose.model('Review', ReviewSchema);

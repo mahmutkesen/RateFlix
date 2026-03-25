@@ -12,6 +12,7 @@ const Lists = () => {
     const [newListName, setNewListName] = useState('');
     const [newListDesc, setNewListDesc] = useState('');
     const [showForm, setShowForm] = useState(false);
+    const [isCreating, setIsCreating] = useState(false);
     const [confirmDelete, setConfirmDelete] = useState({ isOpen: false, listId: null });
     const { showToast } = useToast();
     const navigate = useNavigate();
@@ -26,7 +27,8 @@ const Lists = () => {
 
     const handleCreateList = async (e) => {
         e.preventDefault();
-        if (!newListName.trim()) return;
+        if (!newListName.trim() || isCreating) return;
+        setIsCreating(true);
         try {
             await api.post('/lists', { name: newListName, description: newListDesc, isPublic: true });
             setNewListName('');
@@ -36,6 +38,8 @@ const Lists = () => {
             showToast('Liste başarıyla oluşturuldu.', 'success');
         } catch (error) {
             showToast('Liste oluşturulamadı.', 'error');
+        } finally {
+            setIsCreating(false);
         }
     };
 
@@ -135,8 +139,8 @@ const Lists = () => {
                                 placeholder="Bu liste hakkında kısa bir açıklama..."
                             />
                         </div>
-                        <button type="submit" className="btn-primary">
-                            Liste Oluştur
+                        <button type="submit" className="btn-primary" disabled={isCreating}>
+                            {isCreating ? 'Oluşturuluyor...' : 'Liste Oluştur'}
                         </button>
                     </form>
                 )}

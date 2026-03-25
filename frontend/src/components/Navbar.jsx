@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { FaUser, FaSignOutAlt, FaVideo, FaChevronDown, FaSearch, FaUserFriends } from 'react-icons/fa';
+import { FaUser, FaSignOutAlt, FaVideo, FaChevronDown, FaSearch, FaUserFriends, FaBars, FaTimes } from 'react-icons/fa';
 import { searchMulti, getImageUrl, UNIFIED_CATEGORIES } from '../services/tmdb';
 import api from '../services/api';
 import './Navbar.css';
@@ -17,6 +17,7 @@ const Navbar = () => {
   const [movieSuggestions, setMovieSuggestions] = useState([]);
   const [userSuggestions, setUserSuggestions] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -81,6 +82,7 @@ const Navbar = () => {
     navigate(`/${item.media_type}/${item.id}`);
     setShowSuggestions(false);
     setSearchQuery('');
+    setIsMobileMenuOpen(false); // Close mobile menu too
   };
 
   return (
@@ -171,8 +173,16 @@ const Navbar = () => {
           )}
         </div>
 
-        <div className="nav-links">
-            <Link to="/" className="nav-item">Keşfet</Link>
+        {/* Mobile Toggle */}
+        <button 
+          className="mobile-menu-toggle"
+          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+        >
+          {isMobileMenuOpen ? <FaTimes /> : <FaBars />}
+        </button>
+
+        <div className={`nav-links ${isMobileMenuOpen ? 'mobile-active' : ''}`}>
+            <Link to="/" className="nav-item" onClick={() => setIsMobileMenuOpen(false)}>Keşfet</Link>
             
             <div className="dropdown" ref={dropdownRef}>
                 <button 
@@ -191,7 +201,10 @@ const Navbar = () => {
                           <Link 
                             key={cat.id} 
                             to={`/category/movie?genre=${cat.id}`}
-                            onClick={() => setShowDropdown(false)}
+                            onClick={() => {
+                              setShowDropdown(false);
+                              setIsMobileMenuOpen(false);
+                            }}
                             className="genre-link"
                           >
                             {cat.name}
@@ -207,7 +220,10 @@ const Navbar = () => {
                           <Link 
                             key={cat.id} 
                             to={`/category/tv?genre=${cat.id}`}
-                            onClick={() => setShowDropdown(false)}
+                            onClick={() => {
+                              setShowDropdown(false);
+                              setIsMobileMenuOpen(false);
+                            }}
                             className="genre-link"
                           >
                             {cat.name}
@@ -219,25 +235,25 @@ const Navbar = () => {
                 )}
             </div>
 
-            <Link to="/community" className="nav-item">Topluluk</Link>
+            <Link to="/community" className="nav-item" onClick={() => setIsMobileMenuOpen(false)}>Topluluk</Link>
             
           {token ? (
              <div className="auth-nav">
                {user?.role === 'admin' && (
-                  <Link to="/admin" className="nav-item admin-link" style={{ color: '#d4af37', fontWeight: 'bold' }}>Admin Paneli</Link>
+                  <Link to="/admin" className="nav-item admin-link" style={{ color: '#d4af37', fontWeight: 'bold' }} onClick={() => setIsMobileMenuOpen(false)}>Admin Paneli</Link>
                )}
-               <Link to="/lists" className="nav-item">Listeler</Link>
-               <Link to="/profile" className="nav-item user-profile">
+               <Link to="/lists" className="nav-item" onClick={() => setIsMobileMenuOpen(false)}>Listeler</Link>
+               <Link to="/profile" className="nav-item user-profile" onClick={() => setIsMobileMenuOpen(false)}>
                  <FaUser /> {user?.username}
                </Link>
-               <button onClick={handleLogout} className="btn-logout">
+               <button onClick={() => { handleLogout(); setIsMobileMenuOpen(false); }} className="btn-logout">
                  <FaSignOutAlt />
                </button>
              </div>
           ) : (
              <div className="auth-nav">
-                <Link to="/login" className="nav-item">Giriş Yap</Link>
-                <Link to="/register" className="btn-primary">Kayıt Ol</Link>
+                <Link to="/login" className="nav-item" onClick={() => setIsMobileMenuOpen(false)}>Giriş Yap</Link>
+                <Link to="/register" className="btn-primary" onClick={() => setIsMobileMenuOpen(false)}>Kayıt Ol</Link>
              </div>
           )}
         </div>

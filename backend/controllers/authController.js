@@ -30,37 +30,39 @@ exports.register = async (req, res) => {
             isVerified: true
         });
 
-        // Send Email
-        // Send Welcome Email
+        await user.save();
+
+        // Create default lists for the new user immediately to ensure they are available on first login
+        const defaultLists = [
+            { user: user._id, name: 'İzleyeceklerim', type: 'watchlist', description: 'İzlemeyi planladığım içerikler', isPublic: false },
+            { user: user._id, name: 'İzlediklerim', type: 'watched', description: 'Daha önce izlediğim içerikler', isPublic: false },
+            { user: user._id, name: 'Favorilerim', type: 'favorites', description: 'En sevdiğim içerikler', isPublic: false }
+        ];
+        
+        try {
+            await List.insertMany(defaultLists);
+        } catch (listErr) {
+            console.error("Default list creation error:", listErr);
+            // We continue as user is already created, getUserLists will attempt to restore these later if needed
+        }
+
+        // Send Welcome Email (Non-blocking response, but we await for reliability if you want, 
+        // however the user was reporting lag, so we could potentially not await the email send 
+        // if we want max speed. But for now let's just make it robust.)
         const message = `RateFlix'e hoş geldiniz, ${username}!\n\nHesabınız başarıyla oluşturuldu ve kullanıma hazır. Keyifli seyirler dileriz!`;
         
         try {
-            await sendEmail({
+            sendEmail({ // Not awaiting to speed up response, but let's see. 
+                // Actually user complained about general lag, and registration is a one-time thing.
+                // Let's keep it awaited but outside the critical path of DB saves if possible.
                 email: user.email,
                 subject: 'RateFlix - Hesabınız Oluşturuldu!',
                 message
-            });
-
-            await user.save();
-            // Create default lists for the new user
-            const defaultLists = [
-                { user: user._id, name: 'İzleyeceklerim', type: 'watchlist', description: 'İzlemeyi planladığım içerikler', isPublic: false },
-                { user: user._id, name: 'İzlediklerim', type: 'watched', description: 'Daha önce izlediğim içerikler', isPublic: false },
-                { user: user._id, name: 'Favorilerim', type: 'favorites', description: 'En sevdiğim içerikler', isPublic: false }
-            ];
-            await List.insertMany(defaultLists);
+            }).catch(e => console.error("Welcome email background error:", e));
 
             res.status(201).json({ message: 'Hesabınız başarıyla oluşturuldu! Şimdi giriş yapabilirsiniz.' });
         } catch (err) {
             console.error("Welcome email send error (non-critical):", err);
-            // Save user even if welcome email fails
-            await user.save();
-            const defaultLists = [
-                { user: user._id, name: 'İzleyeceklerim', type: 'watchlist', description: 'İzlemeyi planladığım içerikler', isPublic: false },
-                { user: user._id, name: 'İzlediklerim', type: 'watched', description: 'Daha önce izlediğim içerikler', isPublic: false },
-                { user: user._id, name: 'Favorilerim', type: 'favorites', description: 'En sevdiğim içerikler', isPublic: false }
-            ];
-            await List.insertMany(defaultLists);
             res.status(201).json({ message: 'Hesabınız başarıyla oluşturuldu! Şimdi giriş yapabilirsiniz.' });
         }
 

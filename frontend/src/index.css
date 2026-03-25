@@ -32,10 +32,21 @@ body {
   background-color: var(--bg-color);
   color: var(--text-color);
   min-height: 100vh;
+  overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
   background-image: 
     radial-gradient(circle at 15% 50%, rgba(212, 175, 55, 0.03) 0%, transparent 50%),
     radial-gradient(circle at 85% 30%, rgba(212, 175, 55, 0.04) 0%, transparent 50%);
+}
+
+#root {
+  overflow-x: hidden;
+  width: 100%;
+}
+
+img {
+  max-width: 100%;
+  height: auto;
 }
 
 a {
@@ -69,6 +80,12 @@ input, textarea {
   max-width: 1280px;
   margin: 0 auto;
   padding: 0 24px;
+}
+
+@media (max-width: 768px) {
+  .container {
+    padding: 0 16px;
+  }
 }
 
 /* Forms */
