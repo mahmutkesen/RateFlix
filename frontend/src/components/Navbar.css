@@ -388,8 +388,28 @@
   }
 }
 
+.mobile-only-search {
+  display: none;
+  width: 100%;
+  margin-bottom: 1rem;
+}
+
 @media (max-width: 500px) {
-  .nav-search-container {
+  .desktop-search {
     display: none;
+  }
+  
+  .mobile-only-search {
+    display: block;
+  }
+
+  .search-suggestions {
+    position: fixed;
+    top: 140px;
+    left: 1rem;
+    right: 1rem;
+    width: calc(100% - 2rem);
+    bottom: 2rem;
+    max-height: calc(100vh - 160px);
   }
 }

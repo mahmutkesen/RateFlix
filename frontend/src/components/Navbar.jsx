@@ -85,6 +85,76 @@ const Navbar = () => {
     setIsMobileMenuOpen(false); // Close mobile menu too
   };
 
+  const renderSuggestions = () => {
+    if (!showSuggestions || (!movieSuggestions.length && !userSuggestions.length)) return null;
+
+    return (
+      <div className="search-suggestions glass-panel animate-fade-in shadow-xl">
+        {/* Movies & Series Section */}
+        {movieSuggestions.length > 0 && (
+          <>
+            <div className="suggestion-header">Filmler & Diziler</div>
+            {movieSuggestions.map(item => (
+              <div 
+                key={item.id} 
+                className="suggestion-item"
+                onClick={() => {
+                  navigate(`/${item.media_type}/${item.id}`);
+                  setShowSuggestions(false);
+                  setSearchQuery('');
+                  setIsMobileMenuOpen(false);
+                }}
+              >
+                <img 
+                  src={getImageUrl(item.poster_path, 'w92')} 
+                  alt={item.title || item.name} 
+                />
+                <div className="suggestion-info">
+                  <span className="suggestion-title">{item.title || item.name}</span>
+                  <span className="suggestion-meta">
+                    {item.media_type === 'movie' ? 'Film' : 'Dizi'} 
+                    {` • ${(item.release_date || item.first_air_date || '').split('-')[0]}`}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </>
+        )}
+
+        {/* Members Section */}
+        {userSuggestions.length > 0 && (
+          <>
+            <div className="suggestion-header">Üyeler</div>
+            {userSuggestions.map(userItem => (
+              <div 
+                key={userItem._id} 
+                className="suggestion-item"
+                onClick={() => {
+                  navigate(`/profile/${userItem.username}`);
+                  setShowSuggestions(false);
+                  setSearchQuery('');
+                  setIsMobileMenuOpen(false);
+                }}
+              >
+                <div className="user-suggestion-avatar">
+                  {userItem.profilePic ? (
+                    <img src={userItem.profilePic} alt={userItem.username} style={{ width: '100%', height: '100%', borderRadius: '50%' }} />
+                  ) : (
+                    userItem.username.charAt(0).toUpperCase()
+                  )}
+                </div>
+                <div className="suggestion-info">
+                  <span className="suggestion-title">{userItem.username}</span>
+                  <span className="suggestion-meta" style={{ color: 'var(--primary-color)', fontSize: '0.7rem' }}>Üye</span>
+                </div>
+              </div>
+            ))}
+          </>
+        )}
+      </div>
+    );
+  };
+
   return (
     <nav className="navbar glass-panel">
       <div className="container nav-content">
@@ -96,7 +166,8 @@ const Navbar = () => {
         </Link>
 
         {/* Search Bar - Now on the left side of nav items */}
-        <div className="nav-search-container" ref={searchRef}>
+        {/* Search Bar - Hidden on very small screens, shown in mobile menu instead */}
+        <div className="nav-search-container desktop-search" ref={searchRef}>
           <form className="nav-search" onSubmit={handleSearchSubmit}>
               <FaSearch className="search-icon-min" />
                 <input 
@@ -107,71 +178,9 @@ const Navbar = () => {
                   onFocus={() => searchQuery.length > 1 && setShowSuggestions(true)}
                 />
           </form>
-
-          {showSuggestions && (movieSuggestions.length > 0 || userSuggestions.length > 0) && (
-            <div className="search-suggestions glass-panel animate-fade-in shadow-lg">
-              {/* Movies & Series Section */}
-              {movieSuggestions.length > 0 && (
-                <>
-                  <div className="suggestion-header">Filmler & Diziler</div>
-                  {movieSuggestions.map(item => (
-                    <div 
-                      key={item.id} 
-                      className="suggestion-item"
-                      onClick={() => {
-                        navigate(`/${item.media_type}/${item.id}`);
-                        setShowSuggestions(false);
-                        setSearchQuery('');
-                      }}
-                    >
-                      <img 
-                        src={getImageUrl(item.poster_path, 'w92')} 
-                        alt={item.title || item.name} 
-                      />
-                      <div className="suggestion-info">
-                        <span className="suggestion-title">{item.title || item.name}</span>
-                        <span className="suggestion-meta">
-                          {item.media_type === 'movie' ? 'Film' : 'Dizi'} 
-                          {` • ${(item.release_date || item.first_air_date || '').split('-')[0]}`}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-                </>
-              )}
-
-              {/* Members Section */}
-              {userSuggestions.length > 0 && (
-                <>
-                  <div className="suggestion-header">Üyeler</div>
-                  {userSuggestions.map(userItem => (
-                    <div 
-                      key={userItem._id} 
-                      className="suggestion-item"
-                      onClick={() => {
-                        navigate(`/profile/${userItem.username}`);
-                        setShowSuggestions(false);
-                        setSearchQuery('');
-                      }}
-                    >
-                      <div className="user-suggestion-avatar">
-                        {userItem.profilePic ? (
-                          <img src={userItem.profilePic} alt={userItem.username} style={{ width: '100%', height: '100%', borderRadius: '50%' }} />
-                        ) : (
-                          userItem.username.charAt(0).toUpperCase()
-                        )}
-                      </div>
-                      <div className="suggestion-info">
-                        <span className="suggestion-title">{userItem.username}</span>
-                        <span className="suggestion-meta" style={{ color: 'var(--primary-color)', fontSize: '0.7rem' }}>Üye</span>
-                      </div>
-                    </div>
-                  ))}
-                </>
-              )}
-            </div>
-          )}
+          {showSuggestions && searchQuery && renderSuggestions()}
         </div>
+
 
         {/* Mobile Toggle */}
         <button 
@@ -182,6 +191,21 @@ const Navbar = () => {
         </button>
 
         <div className={`nav-links ${isMobileMenuOpen ? 'mobile-active' : ''}`}>
+            {/* Mobile Search Bar */}
+            <div className="nav-search-container mobile-only-search">
+              <form className="nav-search" onSubmit={handleSearchSubmit}>
+                <FaSearch className="search-icon-min" />
+                <input 
+                  type="text" 
+                  placeholder="Film, dizi ara..." 
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onFocus={() => searchQuery.length > 1 && setShowSuggestions(true)}
+                />
+              </form>
+              {showSuggestions && searchQuery && renderSuggestions()}
+            </div>
+
             <Link to="/" className="nav-item" onClick={() => setIsMobileMenuOpen(false)}>Keşfet</Link>
             
             <div className="dropdown" ref={dropdownRef}>
