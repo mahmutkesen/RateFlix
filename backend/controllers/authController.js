@@ -30,18 +30,9 @@ exports.register = async (req, res) => {
             isVerified: false
         });
 
-        await user.save();
-
-        // Create default lists for the new user
-        const defaultLists = [
-            { user: user._id, name: 'İzleyeceklerim', type: 'watchlist', description: 'İzlemeyi planladığım içerikler', isPublic: false },
-            { user: user._id, name: 'İzlediklerim', type: 'watched', description: 'Daha önce izlediğim içerikler', isPublic: false },
-            { user: user._id, name: 'Favorilerim', type: 'favorites', description: 'En sevdiğim içerikler', isPublic: false }
-        ];
-        await List.insertMany(defaultLists);
-
         // Send Email
-        const verifyUrl = `${req.protocol}://${req.get('host')}/api/auth/verify/${verificationToken}`;
+        const baseUrl = process.env.FRONTEND_URL ? 'https://rateflix-backend.onrender.com' : `${req.protocol}://${req.get('host')}`;
+        const verifyUrl = `${baseUrl}/api/auth/verify/${verificationToken}`;
         const message = `RateFlix'e kaydolduğunuz için teşekkürler!\n\nHesabınızı doğrulamak için lütfen aşağıdaki bağlantıya tıklayın:\n\n${verifyUrl}\n\nEğer bu kaydı siz yapmadıysanız bu e-postayı dikkate almayın.`;
         
         try {
@@ -50,12 +41,21 @@ exports.register = async (req, res) => {
                 subject: 'RateFlix Email Verification',
                 message
             });
-            res.status(201).json({ message: 'Please check your email to verify your account.' });
+
+            await user.save();
+            // Create default lists for the new user
+            const defaultLists = [
+                { user: user._id, name: 'İzleyeceklerim', type: 'watchlist', description: 'İzlemeyi planladığım içerikler', isPublic: false },
+                { user: user._id, name: 'İzlediklerim', type: 'watched', description: 'Daha önce izlediğim içerikler', isPublic: false },
+                { user: user._id, name: 'Favorilerim', type: 'favorites', description: 'En sevdiğim içerikler', isPublic: false }
+            ];
+            await List.insertMany(defaultLists);
+
+            res.status(201).json({ message: 'Lütfen hesabınızı doğrulamak için e-posta kutunuzu kontrol edin.' });
         } catch (err) {
             console.error("Email send error", err);
-            user.verificationToken = undefined;
-            await user.save();
-            res.status(500).json({ message: 'Email could not be sent' });
+            // Don't save user if email fails
+            res.status(500).json({ message: 'E-posta gönderilemediği için kayıt tamamlanamadı. Lütfen e-posta adresinizi veya internet bağlantınızı kontrol edip tekrar deneyin.' });
         }
 
     } catch (err) {
