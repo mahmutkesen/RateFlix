@@ -26,19 +26,18 @@ exports.register = async (req, res) => {
             username,
             email,
             password: hashedPassword,
-            verificationToken: hashedToken,
-            isVerified: false
+            verificationToken: undefined,
+            isVerified: true
         });
 
         // Send Email
-        const baseUrl = process.env.FRONTEND_URL ? 'https://rateflix-backend.onrender.com' : `${req.protocol}://${req.get('host')}`;
-        const verifyUrl = `${baseUrl}/api/auth/verify/${verificationToken}`;
-        const message = `RateFlix'e kaydolduğunuz için teşekkürler!\n\nHesabınızı doğrulamak için lütfen aşağıdaki bağlantıya tıklayın:\n\n${verifyUrl}\n\nEğer bu kaydı siz yapmadıysanız bu e-postayı dikkate almayın.`;
+        // Send Welcome Email
+        const message = `RateFlix'e hoş geldiniz, ${username}!\n\nHesabınız başarıyla oluşturuldu ve kullanıma hazır. Keyifli seyirler dileriz!`;
         
         try {
             await sendEmail({
                 email: user.email,
-                subject: 'RateFlix Email Verification',
+                subject: 'RateFlix - Hesabınız Oluşturuldu!',
                 message
             });
 
@@ -51,11 +50,18 @@ exports.register = async (req, res) => {
             ];
             await List.insertMany(defaultLists);
 
-            res.status(201).json({ message: 'Lütfen hesabınızı doğrulamak için e-posta kutunuzu kontrol edin.' });
+            res.status(201).json({ message: 'Hesabınız başarıyla oluşturuldu! Şimdi giriş yapabilirsiniz.' });
         } catch (err) {
-            console.error("Email send error", err);
-            // Don't save user if email fails
-            res.status(500).json({ message: 'E-posta gönderilemediği için kayıt tamamlanamadı. Lütfen e-posta adresinizi veya internet bağlantınızı kontrol edip tekrar deneyin.' });
+            console.error("Welcome email send error (non-critical):", err);
+            // Save user even if welcome email fails
+            await user.save();
+            const defaultLists = [
+                { user: user._id, name: 'İzleyeceklerim', type: 'watchlist', description: 'İzlemeyi planladığım içerikler', isPublic: false },
+                { user: user._id, name: 'İzlediklerim', type: 'watched', description: 'Daha önce izlediğim içerikler', isPublic: false },
+                { user: user._id, name: 'Favorilerim', type: 'favorites', description: 'En sevdiğim içerikler', isPublic: false }
+            ];
+            await List.insertMany(defaultLists);
+            res.status(201).json({ message: 'Hesabınız başarıyla oluşturuldu! Şimdi giriş yapabilirsiniz.' });
         }
 
     } catch (err) {
@@ -75,9 +81,7 @@ exports.login = async (req, res) => {
         const isMatch = await bcrypt.compare(password, user.password);
         if (!isMatch) return res.status(400).json({ message: 'Invalid credentials' });
 
-        if (!user.isVerified) {
-            return res.status(403).json({ message: 'Please verify your email first' });
-        }
+        /* Skipping isVerified check for simplified flow */
 
         const payload = { user: { id: user.id, role: user.role } };
         jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '5h' }, (err, token) => {
@@ -133,9 +137,10 @@ exports.verifyEmail = async (req, res) => {
 exports.testEmail = async (req, res) => {
     try {
         await sendEmail({
-            email: 'test@example.com',
-            subject: 'Test Email',
-            message: 'This is a test'
+            email: 'kesenmahmut01@gmail.com',
+            subject: 'RateFlix Resend Test',
+            message: 'Resend entegrasyonu başarıyla tamamlandı!',
+            html: '<h1>RateFlix</h1><p>Resend entegrasyonu başarıyla tamamlandı!</p>'
         });
         res.json({ success: true, message: 'Test email sent successfully' });
     } catch (err) {
