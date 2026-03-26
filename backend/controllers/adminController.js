@@ -9,7 +9,7 @@ exports.getStats = async (req, res) => {
     try {
         const userCount = await User.countDocuments();
         const reviewCount = await Review.countDocuments();
-        const listCount = await List.countDocuments();
+        const listCount = await List.countDocuments({ type: 'custom' });
          
         res.json({
             users: userCount,

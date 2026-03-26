@@ -98,7 +98,8 @@ const Navbar = () => {
               <div 
                 key={item.id} 
                 className="suggestion-item"
-                onClick={() => {
+                onMouseDown={(e) => {
+                  e.preventDefault();
                   navigate(`/${item.media_type}/${item.id}`);
                   setShowSuggestions(false);
                   setSearchQuery('');
@@ -129,7 +130,8 @@ const Navbar = () => {
               <div 
                 key={userItem._id} 
                 className="suggestion-item"
-                onClick={() => {
+                onMouseDown={(e) => {
+                  e.preventDefault();
                   navigate(`/profile/${userItem.username}`);
                   setShowSuggestions(false);
                   setSearchQuery('');

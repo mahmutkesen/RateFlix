@@ -26,8 +26,8 @@ exports.register = async (req, res) => {
             username,
             email,
             password: hashedPassword,
-            verificationToken: undefined,
-            isVerified: true
+            verificationToken: hashedToken,
+            isVerified: false
         });
 
         await user.save();
@@ -49,21 +49,23 @@ exports.register = async (req, res) => {
         // Send Welcome Email (Non-blocking response, but we await for reliability if you want, 
         // however the user was reporting lag, so we could potentially not await the email send 
         // if we want max speed. But for now let's just make it robust.)
-        const message = `RateFlix'e hoş geldiniz, ${username}!\n\nHesabınız başarıyla oluşturuldu ve kullanıma hazır. Keyifli seyirler dileriz!`;
+        // Send Verification Email
+        const verificationUrl = `${process.env.BACKEND_URL || 'http://localhost:5000'}/api/auth/verify/${verificationToken}`;
+        const message = `RateFlix'e hoş geldiniz, ${username}!\n\nHesabınızı doğrulamak ve uygulamaya giriş yapmak için lütfen aşağıdaki bağlantıya tıklayın:\n\n${verificationUrl}\n\nKeyifli seyirler dileriz!`;
         
         try {
-            sendEmail({ // Not awaiting to speed up response, but let's see. 
-                // Actually user complained about general lag, and registration is a one-time thing.
-                // Let's keep it awaited but outside the critical path of DB saves if possible.
+            await sendEmail({
                 email: user.email,
-                subject: 'RateFlix - Hesabınız Oluşturuldu!',
+                subject: 'RateFlix - Hesabınızı Doğrulayın',
                 message
-            }).catch(e => console.error("Welcome email background error:", e));
+            });
 
-            res.status(201).json({ message: 'Hesabınız başarıyla oluşturuldu! Şimdi giriş yapabilirsiniz.' });
+            res.status(201).json({ message: 'Kayıt başarılı! Hesabınızı doğrulamak için lütfen e-posta adresinize gönderilen linke tıklayın.' });
         } catch (err) {
-            console.error("Welcome email send error (non-critical):", err);
-            res.status(201).json({ message: 'Hesabınız başarıyla oluşturuldu! Şimdi giriş yapabilirsiniz.' });
+            console.error("Verification email send error:", err);
+            // Even if email fails, user is created. But they might be stuck without a link.
+            // In a real app we'd handle this better, but for now we'll let them know something went wrong.
+            res.status(201).json({ message: 'Kayıt başarılı, ancak doğrulama e-postası gönderilemedi. Lütfen daha sonra giriş yapmayı deneyin.' });
         }
 
     } catch (err) {
@@ -81,9 +83,11 @@ exports.login = async (req, res) => {
         if (!user) return res.status(400).json({ message: 'Invalid credentials' });
 
         const isMatch = await bcrypt.compare(password, user.password);
-        if (!isMatch) return res.status(400).json({ message: 'Invalid credentials' });
+        if (!isMatch) return res.status(400).json({ message: 'E-posta veya şifre hatalı.' });
 
-        /* Skipping isVerified check for simplified flow */
+        if (!user.isVerified) {
+            return res.status(401).json({ message: 'Hesabınız henüz doğrulanmamış. Lütfen e-postanızı kontrol edin.' });
+        }
 
         const payload = { user: { id: user.id, role: user.role } };
         jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '5h' }, (err, token) => {

@@ -7,7 +7,7 @@ import { useToast } from '../components/Toast';
 import './MovieCard.css';
 import { useUserLists } from '../context/UserListsContext';
 
-const MovieCard = ({ item, type }) => {
+const MovieCard = React.memo(({ item, type }) => {
     const [rateflixRating, setRateflixRating] = React.useState(0);
     const { userLists, refreshLists } = useUserLists();
 
@@ -61,7 +61,7 @@ const MovieCard = ({ item, type }) => {
         <Link to={`/${type}/${item.id}`} className="movie-card">
             <div className="card-image-wrapper">
                 <img
-                    src={getImageUrl(item.poster_path)}
+                    src={getImageUrl(item.poster_path, 'w342')}
                     alt={item.title || item.name}
                     className="card-image"
                     loading="lazy"
@@ -156,6 +156,6 @@ const MovieCard = ({ item, type }) => {
             </div>
         </Link>
     );
-};
+});
 
 export default MovieCard;

@@ -10,6 +10,14 @@ const Login = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const location = new URLSearchParams(window.location.search);
+  const isVerified = location.get('verified') === 'true';
+
+  React.useEffect(() => {
+    if (isVerified) {
+        setError('success:Hesabınız başarıyla doğrulandı! Şimdi giriş yapabilirsiniz.');
+    }
+  }, [isVerified]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -40,7 +48,11 @@ const Login = () => {
             <h2 className="auth-title">Tekrar Hoş Geldiniz</h2>
             <p className="auth-subtitle">Yeni filmleri keşfetmek ve listelerinizi yönetmek için giriş yapın</p>
             
-            {error && <div className="auth-error">{error}</div>}
+            {error && (
+                <div className={error.startsWith('success:') ? "auth-success" : "auth-error"}>
+                    {error.startsWith('success:') ? error.replace('success:', '') : error}
+                </div>
+            )}
             
             <form onSubmit={handleSubmit} className="auth-form">
                 <div className="form-group">

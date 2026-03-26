@@ -246,3 +246,36 @@
     from { opacity: 0; transform: translateY(10px); }
     to { opacity: 1; transform: translateY(0); }
 }
+/* Responsive Fixes */
+@media (max-width: 600px) {
+    .community-page {
+        padding: 0 1rem !important;
+    }
+    
+    .community-page .hero h1 {
+        font-size: 2rem !important;
+    }
+
+    /* Review Item Mobile Fix */
+    .glass-panel .review-header {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 0.5rem;
+    }
+
+    .glass-panel .review-content-wrapper {
+        gap: 0.5rem !important;
+    }
+
+    /* Tabs Mobile Fix */
+    .community-page div[style*="display: flex"][style*="justify-content: center"] {
+        flex-direction: column;
+        gap: 0.8rem !important;
+    }
+
+    .community-page div[style*="display: flex"][style*="justify-content: center"] button {
+        width: 100%;
+        padding: 0.6rem 1.5rem !important;
+        font-size: 1rem !important;
+    }
+}

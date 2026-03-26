@@ -11,6 +11,7 @@ const Lists = () => {
     const { userLists: lists, loading, refreshLists } = useUserLists();
     const [newListName, setNewListName] = useState('');
     const [newListDesc, setNewListDesc] = useState('');
+    const [isPublic, setIsPublic] = useState(false);
     const [showForm, setShowForm] = useState(false);
     const [isCreating, setIsCreating] = useState(false);
     const [confirmDelete, setConfirmDelete] = useState({ isOpen: false, listId: null });
@@ -30,9 +31,10 @@ const Lists = () => {
         if (!newListName.trim() || isCreating) return;
         setIsCreating(true);
         try {
-            await api.post('/lists', { name: newListName, description: newListDesc, isPublic: true });
+            await api.post('/lists', { name: newListName, description: newListDesc, isPublic: isPublic });
             setNewListName('');
             setNewListDesc('');
+            setIsPublic(false);
             setShowForm(false);
             refreshLists();
             showToast('Liste başarıyla oluşturuldu.', 'success');
@@ -130,14 +132,16 @@ const Lists = () => {
                                 required
                             />
                         </div>
-                        <div className="form-group">
-                            <label>Açıklama (İsteğe bağlı)</label>
+                        <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: '0.8rem', marginTop: '1rem', marginBottom: '1.5rem', cursor: 'pointer' }} onClick={() => setIsPublic(!isPublic)}>
                             <input
-                                type="text"
-                                value={newListDesc}
-                                onChange={e => setNewListDesc(e.target.value)}
-                                placeholder="Bu liste hakkında kısa bir açıklama..."
+                                type="checkbox"
+                                checked={isPublic}
+                                onChange={e => setIsPublic(e.target.checked)}
+                                style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: 'var(--primary-color)' }}
                             />
+                            <label style={{ margin: 0, cursor: 'pointer', fontSize: '0.95rem', color: isPublic ? 'var(--primary-color)' : '#bbb' }}>
+                                Toplulukla Paylaş (Diğer üyeler bu listeyi görebilir)
+                            </label>
                         </div>
                         <button type="submit" className="btn-primary" disabled={isCreating}>
                             {isCreating ? 'Oluşturuluyor...' : 'Liste Oluştur'}
@@ -169,18 +173,24 @@ const Lists = () => {
                                         {list.description && (
                                             <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>{list.description}</p>
                                         )}
-                                        <span style={{
-                                            display: 'inline-block',
-                                            marginTop: '0.5rem',
-                                            background: 'rgba(212,175,55,0.15)',
-                                            color: 'var(--primary-color)',
-                                            padding: '2px 10px',
-                                            borderRadius: '20px',
-                                            fontSize: '0.8rem',
-                                            fontWeight: 600
-                                        }}>
-                                            {list.items.length} {list.items.length === 1 ? 'içerik' : 'içerik'}
-                                        </span>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                                            <span style={{
+                                                display: 'inline-block',
+                                                background: 'rgba(212,175,55,0.15)',
+                                                color: 'var(--primary-color)',
+                                                padding: '2px 10px',
+                                                borderRadius: '20px',
+                                                fontSize: '0.8rem',
+                                                fontWeight: 600
+                                            }}>
+                                                {list.items.length} içerik
+                                            </span>
+                                            {list.isPublic && (
+                                                <span style={{ fontSize: '0.75rem', color: '#2ecc71', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                    • Toplulukta Paylaşıldı
+                                                </span>
+                                            )}
+                                        </div>
                                     </div>
                                     <button
                                         onClick={() => handleDeleteList(list._id)}

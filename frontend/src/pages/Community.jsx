@@ -328,25 +328,25 @@ const Community = () => {
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
                                 {reviews.map(review => (
                                     <div key={review._id} className="glass-panel" style={{ padding: '1.5rem', position: 'relative' }}>
-                                        <div style={{ display: 'flex', gap: '1rem' }}>
-                                            {/* Poster */}
-                                            <Link to={`/${review.mediaType}/${review.tmdbId}`} style={{ flexShrink: 0 }}>
-                                                {review.posterPath ? (
-                                                    <img
-                                                        src={getImageUrl(review.posterPath, 'w200')}
-                                                        alt={review.movieTitle}
-                                                        style={{ width: '80px', borderRadius: '8px', objectFit: 'cover' }}
-                                                    />
-                                                ) : (
-                                                    <div style={{ width: '80px', height: '120px', background: 'rgba(255,255,255,0.1)', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                                        <FaFilm style={{ color: 'var(--text-muted)' }} />
-                                                    </div>
-                                                )}
-                                            </Link>
+                                            <div className="review-content-wrapper" style={{ display: 'flex', gap: '1rem' }}>
+                                                {/* Poster */}
+                                                <Link to={`/${review.mediaType}/${review.tmdbId}`} style={{ flexShrink: 0 }}>
+                                                    {review.posterPath ? (
+                                                        <img
+                                                            src={getImageUrl(review.posterPath, 'w200')}
+                                                            alt={review.movieTitle}
+                                                            style={{ width: '80px', borderRadius: '8px', objectFit: 'cover' }}
+                                                        />
+                                                    ) : (
+                                                        <div style={{ width: '80px', height: '120px', background: 'rgba(255,255,255,0.1)', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                            <FaFilm style={{ color: 'var(--text-muted)' }} />
+                                                        </div>
+                                                    )}
+                                                </Link>
 
-                                            {/* İçerik */}
-                                            <div style={{ flex: 1 }}>
-                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.5rem' }}>
+                                                {/* İçerik */}
+                                                <div style={{ flex: 1 }}>
+                                                    <div className="review-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.5rem' }}>
                                                     <div>
                                                         <Link to={review.user ? `/profile/${review.user.username || review.user._id || review.user}` : '#'} style={{ textDecoration: 'none' }}>
                                                             <div style={{ fontWeight: 700, fontSize: '1rem', color: '#fff', marginBottom: '0.3rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>

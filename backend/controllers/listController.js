@@ -8,7 +8,10 @@ exports.getAllPublicLists = async (req, res) => {
         if (process.env.USE_MEMORY_DB === 'true') {
             return res.json(memLists.filter(l => l.isPublic !== false).slice(0, 50));
         }
-        const lists = await List.find({ isPublic: true }).sort({ createdAt: -1 }).limit(50).populate('user', 'username profilePic');
+        const lists = await List.find({ 
+            isPublic: true,
+            "items.0": { $exists: true } 
+        }).sort({ createdAt: -1 }).limit(50).populate('user', 'username profilePic');
         
         const listIds = lists.map(l => l._id);
         const counts = await Comment.aggregate([

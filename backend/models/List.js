@@ -17,7 +17,7 @@ const ListSchema = new mongoose.Schema({
     },
     isPublic: {
         type: Boolean,
-        default: true
+        default: false
     },
     type: { // 'custom', 'favorites', 'watchlist', 'watched'
         type: String,

@@ -32,43 +32,38 @@ const Home = () => {
         const fetchAllContent = async () => {
              setLoading(true);
              try {
-                // Fetch Trending Movies & Series (Reduced from 3 pages to 1 for performance)
-                const trM = await Promise.all([1].map(p => safeFetch(getTrending('movie', 'week', p))));
-                const trS = await Promise.all([1].map(p => safeFetch(getTrending('tv', 'week', p))));
-                setTrendingMovies(extractResults(trM));
-                setTrendingSeries(extractResults(trS));
+                // Parallel fetch all base data
+                const [trMResults, trSResults, topMResults, topSResults, rfTopM, rfTopS] = await Promise.all([
+                    safeFetch(getTrending('movie', 'week', 1)),
+                    safeFetch(getTrending('tv', 'week', 1)),
+                    safeFetch(getTopRated('movie', 1)),
+                    safeFetch(getTopRated('tv', 1)),
+                    api.get('/reviews/top-rated?type=movie').catch(() => ({ data: [] })),
+                    api.get('/reviews/top-rated?type=tv').catch(() => ({ data: [] }))
+                ]);
 
-                // Fetch TMDB Top Rated (Base data)
-                const topM = await Promise.all([1].map(p => safeFetch(getTopRated('movie', p))));
-                const topS = await Promise.all([1].map(p => safeFetch(getTopRated('tv', p))));
-                
-                let finalMovies = extractResults(topM);
-                let finalSeries = extractResults(topS);
+                setTrendingMovies(trMResults.data?.results || []);
+                setTrendingSeries(trSResults.data?.results || []);
 
-                // Try to enhance with RateFlix ratings if possible
-                try {
-                    const [rfTopM, rfTopS] = await Promise.all([
-                        api.get('/reviews/top-rated?type=movie').catch(() => ({ data: [] })),
-                        api.get('/reviews/top-rated?type=tv').catch(() => ({ data: [] }))
+                let finalMovies = topMResults.data?.results || [];
+                let finalSeries = topSResults.data?.results || [];
+
+                // Enhance with RateFlix ratings in parallel if needed
+                if (rfTopM.data.length > 0 || rfTopS.data.length > 0) {
+                    const [rfMovieItems, rfTvItems] = await Promise.all([
+                        Promise.all(rfTopM.data.slice(0, 10).map(item => getDetails('movie', item.tmdbId).catch(() => null))),
+                        Promise.all(rfTopS.data.slice(0, 10).map(item => getDetails('tv', item.tmdbId).catch(() => null)))
                     ]);
 
-                    if (rfTopM.data.length > 0 || rfTopS.data.length > 0) {
-                        // Limit to top 10 from RateFlix to avoid excessive TMDB calls
-                        const rfMovieDetails = await Promise.all(rfTopM.data.slice(0, 10).map(item => getDetails('movie', item.tmdbId).catch(() => null)));
-                        const rfTvDetails = await Promise.all(rfTopS.data.slice(0, 10).map(item => getDetails('tv', item.tmdbId).catch(() => null)));
+                    const mergeTopRated = (rfDetailsItems, tmdbItems) => {
+                        const rfData = rfDetailsItems.filter(r => r && r.data).map(r => r.data);
+                        const rfIds = new Set(rfData.map(i => i.id));
+                        const filteredTmdb = tmdbItems.filter(i => !rfIds.has(i.id));
+                        return [...rfData, ...filteredTmdb];
+                    };
 
-                        const mergeTopRated = (rfDetailsItems, tmdbItems) => {
-                            const rfData = rfDetailsItems.filter(r => r && r.data).map(r => r.data);
-                            const rfIds = new Set(rfData.map(i => i.id));
-                            const filteredTmdb = tmdbItems.filter(i => !rfIds.has(i.id));
-                            return [...rfData, ...filteredTmdb];
-                        };
-
-                        finalMovies = mergeTopRated(rfMovieDetails, finalMovies);
-                        finalSeries = mergeTopRated(rfTvDetails, finalSeries);
-                    }
-                } catch (rfErr) {
-                    console.error("RateFlix enhancement failed:", rfErr);
+                    finalMovies = mergeTopRated(rfMovieItems, finalMovies);
+                    finalSeries = mergeTopRated(rfTvItems, finalSeries);
                 }
 
                 setTopRatedMovies(finalMovies);

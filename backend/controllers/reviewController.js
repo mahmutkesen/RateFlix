@@ -29,9 +29,23 @@ exports.getAverageRating = async (req, res) => {
     }
 };
 
+let topRatedCache = {
+    movie: { data: null, timestamp: 0 },
+    tv: { data: null, timestamp: 0 },
+    all: { data: null, timestamp: 0 }
+};
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
 exports.getTopRatedItems = async (req, res) => {
     try {
         const { type } = req.query; // 'movie' or 'tv'
+        const cacheKey = type || 'all';
+        
+        // Return cached data if valid
+        if (topRatedCache[cacheKey].data && (Date.now() - topRatedCache[cacheKey].timestamp < CACHE_TTL)) {
+            return res.json(topRatedCache[cacheKey].data);
+        }
+
         let reviews = [];
         if (process.env.USE_MEMORY_DB === 'true') {
             reviews = memReviews;
@@ -59,6 +73,9 @@ exports.getTopRatedItems = async (req, res) => {
             }))
             .sort((a, b) => b.average - a.average || b.count - a.count)
             .slice(0, 20); // Top 20 from RateFlix
+
+        // Update cache
+        topRatedCache[cacheKey] = { data: topRated, timestamp: Date.now() };
 
         res.json(topRated);
     } catch (err) {
