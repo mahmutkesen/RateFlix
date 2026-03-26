@@ -77,8 +77,9 @@ const Profile = () => {
                 showToast("Takip edildi.", 'success');
             }
         } catch (err) {
-            console.error("Follow error", err);
-            showToast("Bir hata oluştu.", 'error');
+            console.error("Follow error:", err.response?.data || err.message);
+            const msg = err.response?.data?.message || "Bir hata oluştu.";
+            showToast(msg, 'error');
         } finally {
             setIsSubmitting(false);
         }

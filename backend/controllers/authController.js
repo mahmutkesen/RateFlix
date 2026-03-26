@@ -225,6 +225,7 @@ exports.followUser = async (req, res) => {
             userToFollow.followers.push(new mongoose.Types.ObjectId(currentUserId));
             currentUser.following.push(new mongoose.Types.ObjectId(targetId));
             
+            console.log(`[Social Debug] Saving users... Target: ${targetId}, Current: ${currentUserId}`);
             await Promise.all([userToFollow.save(), currentUser.save()]);
             console.log(`[Social Success] ${currentUserId} followed ${targetId}`);
             return res.json({ message: "User followed successfully" });
@@ -259,6 +260,7 @@ exports.unfollowUser = async (req, res) => {
             userToUnfollow.followers = userToUnfollow.followers.filter(id => id.toString() !== currentUserId);
             currentUser.following = currentUser.following.filter(id => id.toString() !== targetId);
             
+            console.log(`[Social Debug] Unfollowing users... Target: ${targetId}, Current: ${currentUserId}`);
             await Promise.all([userToUnfollow.save(), currentUser.save()]);
             console.log(`[Social Success] ${currentUserId} unfollowed ${targetId}`);
             return res.json({ message: "User unfollowed successfully" });
