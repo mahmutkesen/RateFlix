@@ -46,9 +46,6 @@ exports.register = async (req, res) => {
             // We continue as user is already created, getUserLists will attempt to restore these later if needed
         }
 
-        // Send Welcome Email (Non-blocking response, but we await for reliability if you want, 
-        // however the user was reporting lag, so we could potentially not await the email send 
-        // if we want max speed. But for now let's just make it robust.)
         // Send Welcome Email (Non-blocking response)
         const message = `RateFlix'e hoş geldiniz, ${username}!\n\nHesabınız başarıyla oluşturuldu ve kullanıma hazır. Keyifli seyirler dileriz!`;
         
@@ -59,10 +56,9 @@ exports.register = async (req, res) => {
                 message
             }).catch(e => console.error("Welcome email background error:", e));
 
-            res.status(201).json({ message: 'Hesabınız başarıyla oluşturuldu! Şimdi giriş yapabilirsiniz.' });
+            res.status(201).json({ message: 'Kayıt başarılı! Şimdi giriş yapabilirsiniz.' });
         } catch (err) {
-            console.error("Welcome email send error (non-critical):", err);
-            res.status(201).json({ message: 'Hesabınız başarıyla oluşturuldu! Şimdi giriş yapabilirsiniz.' });
+            res.status(201).json({ message: 'Kayıt başarılı! Şimdi giriş yapabilirsiniz.' });
         }
 
     } catch (err) {

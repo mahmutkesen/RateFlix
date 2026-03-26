@@ -10,14 +10,6 @@ const Login = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
-  const location = new URLSearchParams(window.location.search);
-  const isVerified = location.get('verified') === 'true';
-
-  React.useEffect(() => {
-    if (isVerified) {
-        setError('success:Hesabınız başarıyla doğrulandı! Şimdi giriş yapabilirsiniz.');
-    }
-  }, [isVerified]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
