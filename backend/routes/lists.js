@@ -25,6 +25,9 @@ router.delete('/:id/items/:tmdbId', auth, listController.removeItemFromList);
 router.post('/:id/like', auth, listController.toggleListLike);
 router.post('/:id/dislike', auth, listController.toggleListDislike);
 
+// Update custom list
+router.patch('/:id', auth, listController.updateList);
+
 // Delete custom list
 router.delete('/:id', auth, listController.deleteList);
 

@@ -15,6 +15,7 @@ const Lists = () => {
     const [showForm, setShowForm] = useState(false);
     const [isCreating, setIsCreating] = useState(false);
     const [confirmDelete, setConfirmDelete] = useState({ isOpen: false, listId: null });
+    const [editingList, setEditingList] = useState(null); // { id, name, description, isPublic }
     const { showToast } = useToast();
     const navigate = useNavigate();
 
@@ -65,6 +66,32 @@ const Lists = () => {
             await api.delete(`/lists/${listId}/items/${tmdbId}`);
             refreshLists();
             showToast('İçerik listeden çıkarıldı.', 'success');
+        } catch (error) {
+            showToast('İşlem başarısız oldu.', 'error');
+        }
+    };
+
+    const handleUpdateList = async (e) => {
+        e.preventDefault();
+        try {
+            await api.patch(`/lists/${editingList.id}`, {
+                name: editingList.name,
+                description: editingList.description,
+                isPublic: editingList.isPublic
+            });
+            setEditingList(null);
+            refreshLists();
+            showToast('Liste güncellendi.', 'success');
+        } catch (error) {
+            showToast('Liste güncellenemedi.', 'error');
+        }
+    };
+
+    const toggleListVisibility = async (list) => {
+        try {
+            await api.patch(`/lists/${list._id}`, { isPublic: !list.isPublic });
+            refreshLists();
+            showToast(list.isPublic ? 'Liste topluluktan kaldırıldı.' : 'Liste toplulukla paylaşıldı.', 'success');
         } catch (error) {
             showToast('İşlem başarısız oldu.', 'error');
         }
@@ -132,6 +159,15 @@ const Lists = () => {
                                 required
                             />
                         </div>
+                        <div className="form-group">
+                            <label>Açıklama (İsteğe bağlı)</label>
+                            <input
+                                type="text"
+                                value={newListDesc}
+                                onChange={e => setNewListDesc(e.target.value)}
+                                placeholder="Bu liste hakkında kısa bir açıklama..."
+                            />
+                        </div>
                         <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: '0.8rem', marginTop: '1rem', marginBottom: '1.5rem', cursor: 'pointer' }} onClick={() => setIsPublic(!isPublic)}>
                             <input
                                 type="checkbox"
@@ -147,6 +183,53 @@ const Lists = () => {
                             {isCreating ? 'Oluşturuluyor...' : 'Liste Oluştur'}
                         </button>
                     </form>
+                )}
+                {/* Edit List Modal/Form */}
+                {editingList && (
+                    <div style={{
+                        position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+                        background: 'rgba(0,0,0,0.8)', zIndex: 1000,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem'
+                    }} onClick={() => setEditingList(null)}>
+                        <form
+                            onSubmit={handleUpdateList}
+                            className="glass-panel"
+                            style={{ padding: '2rem', width: '100%', maxWidth: '500px' }}
+                            onClick={e => e.stopPropagation()}
+                        >
+                            <h3 style={{ marginBottom: '1.5rem', color: 'var(--primary-color)' }}>Listeyi Düzenle</h3>
+                            <div className="form-group">
+                                <label>Liste Adı</label>
+                                <input
+                                    type="text"
+                                    value={editingList.name}
+                                    onChange={e => setEditingList({ ...editingList, name: e.target.value })}
+                                    required
+                                />
+                            </div>
+                            <div className="form-group">
+                                <label>Açıklama</label>
+                                <input
+                                    type="text"
+                                    value={editingList.description}
+                                    onChange={e => setEditingList({ ...editingList, description: e.target.value })}
+                                />
+                            </div>
+                            <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: '0.8rem', marginTop: '1rem', marginBottom: '1.5rem' }}>
+                                <input
+                                    type="checkbox"
+                                    checked={editingList.isPublic}
+                                    onChange={e => setEditingList({ ...editingList, isPublic: e.target.checked })}
+                                    id="editIsPublic"
+                                />
+                                <label htmlFor="editIsPublic" style={{ margin: 0 }}>Toplulukla Paylaş</label>
+                            </div>
+                            <div style={{ display: 'flex', gap: '1rem' }}>
+                                <button type="submit" className="btn-primary" style={{ flex: 1 }}>Güncelle</button>
+                                <button type="button" className="btn-secondary" style={{ flex: 1 }} onClick={() => setEditingList(null)}>İptal</button>
+                            </div>
+                        </form>
+                    </div>
                 )}
 
                 {/* Lists */}
@@ -192,26 +275,39 @@ const Lists = () => {
                                             )}
                                         </div>
                                     </div>
-                                    <button
-                                        onClick={() => handleDeleteList(list._id)}
-                                        style={{
-                                            background: 'rgba(231,76,60,0.1)',
-                                            border: '1px solid rgba(231,76,60,0.3)',
-                                            color: 'var(--danger-color)',
-                                            padding: '0.5rem 1rem',
-                                            borderRadius: '8px',
-                                            cursor: 'pointer',
-                                            fontSize: '0.85rem',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            gap: '0.4rem',
-                                            transition: 'all 0.2s ease'
-                                        }}
-                                        onMouseEnter={e => e.currentTarget.style.background = 'rgba(231,76,60,0.2)'}
-                                        onMouseLeave={e => e.currentTarget.style.background = 'rgba(231,76,60,0.1)'}
-                                    >
-                                        <FaTrash /> Sil
-                                    </button>
+                                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                        <button
+                                            onClick={() => setEditingList({ id: list._id, name: list.name, description: list.description || '', isPublic: list.isPublic })}
+                                            style={{
+                                                background: 'rgba(212,175,55,0.1)',
+                                                border: '1px solid rgba(212,175,55,0.3)',
+                                                color: 'var(--primary-color)',
+                                                padding: '0.5rem 1rem',
+                                                borderRadius: '8px',
+                                                cursor: 'pointer',
+                                                fontSize: '0.85rem'
+                                            }}
+                                        >
+                                            Düzenle
+                                        </button>
+                                        <button
+                                            onClick={() => handleDeleteList(list._id)}
+                                            style={{
+                                                background: 'rgba(231,76,60,0.1)',
+                                                border: '1px solid rgba(231,76,60,0.3)',
+                                                color: 'var(--danger-color)',
+                                                padding: '0.5rem 1rem',
+                                                borderRadius: '8px',
+                                                cursor: 'pointer',
+                                                fontSize: '0.85rem',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: '0.4rem'
+                                            }}
+                                        >
+                                            <FaTrash /> Sil
+                                        </button>
+                                    </div>
                                 </div>
 
                                 {/* Items */}

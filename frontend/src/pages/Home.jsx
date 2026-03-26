@@ -38,8 +38,8 @@ const Home = () => {
                     safeFetch(getTrending('tv', 'week', 1)),
                     safeFetch(getTopRated('movie', 1)),
                     safeFetch(getTopRated('tv', 1)),
-                    api.get('/reviews/top-rated?type=movie').catch(() => ({ data: [] })),
-                    api.get('/reviews/top-rated?type=tv').catch(() => ({ data: [] }))
+                    safeFetch(api.get('/reviews/top-rated?type=movie')),
+                    safeFetch(api.get('/reviews/top-rated?type=tv'))
                 ]);
 
                 setTrendingMovies(trMResults.data?.results || []);

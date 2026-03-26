@@ -179,6 +179,8 @@ exports.addReview = async (req, res) => {
             posterPath 
         });
         await review.save();
+        // Invalidate cache
+        topRatedCache = { movie: { data: null, timestamp: 0 }, tv: { data: null, timestamp: 0 }, all: { data: null, timestamp: 0 } };
         res.status(201).json(review);
     } catch (err) { res.status(500).send('Server Error'); }
 };
@@ -209,6 +211,8 @@ exports.deleteReview = async (req, res) => {
         
         console.log(`[AUTH DEBUG] AUTHORIZATION SUCCESS`);
         await review.deleteOne();
+        // Invalidate cache
+        topRatedCache = { movie: { data: null, timestamp: 0 }, tv: { data: null, timestamp: 0 }, all: { data: null, timestamp: 0 } };
         res.json({ message: 'Review removed' });
     } catch (err) { res.status(500).send('Server Error'); }
 };

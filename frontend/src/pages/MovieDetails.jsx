@@ -20,6 +20,7 @@ const MovieDetails = ({ type }) => {
     const [showListMenu, setShowListMenu] = useState(false);
     const [confirmDelete, setConfirmDelete] = useState({ isOpen: false, reviewId: null });
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isEditingReview, setIsEditingReview] = useState(false);
     const [isAddingToList, setIsAddingToList] = useState(false);
     const token = localStorage.getItem('token');
     const { showToast } = useToast();
@@ -41,6 +42,9 @@ const MovieDetails = ({ type }) => {
                     if (myOldReview) {
                         setMyRating(myOldReview.rating);
                         setMyReviewText(myOldReview.reviewText || '');
+                        setIsEditingReview(true);
+                    } else {
+                        setIsEditingReview(false);
                     }
                 }
             } catch (reviewErr) {
@@ -262,7 +266,7 @@ const MovieDetails = ({ type }) => {
                                 ></textarea>
                             </div>
                             <button type="submit" className="btn-primary" disabled={myRating === 0 || isSubmitting} title={myRating === 0 ? "Lütfen önce yıldızlara tıklayarak puan verin" : ""}>
-                                {isSubmitting ? "Gönderiliyor..." : (myRating === 0 ? "Puan Vererek Gönder" : "İncelemeyi Gönder")}
+                                {isSubmitting ? "Gönderiliyor..." : (isEditingReview ? "İncelemeyi Güncelle" : "İncelemeyi Gönder")}
                             </button>
                         </form>
                     ) : (

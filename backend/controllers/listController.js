@@ -163,6 +163,23 @@ exports.deleteList = async (req, res) => {
     } catch (err) { res.status(500).send('Server Error'); }
 };
 
+exports.updateList = async (req, res) => {
+    try {
+        const { name, description, isPublic } = req.body;
+        const list = await List.findById(req.params.id);
+        
+        if (!list) return res.status(404).json({ message: 'List not found' });
+        if (list.user.toString() !== req.user.id) return res.status(403).json({ message: 'Not authorized' });
+
+        if (name) list.name = name;
+        if (description !== undefined) list.description = description;
+        if (isPublic !== undefined) list.isPublic = isPublic;
+
+        await list.save();
+        res.json(list);
+    } catch (err) { res.status(500).send('Server Error'); }
+};
+
 exports.toggleListLike = async (req, res) => {
     try {
         const list = await List.findById(req.params.id);
