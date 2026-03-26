@@ -4,6 +4,7 @@ const Review = require('../models/Review');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
+const mongoose = require('mongoose');
 const sendEmail = require('../utils/sendEmail');
 
 // Register
