@@ -204,60 +204,69 @@ exports.searchUsers = async (req, res) => {
 
 exports.followUser = async (req, res) => {
     try {
-        if (req.user.id === req.params.id) {
+        const targetId = req.params.id;
+        const currentUserId = req.user.id;
+
+        if (currentUserId === targetId) {
             return res.status(400).json({ message: "You cannot follow yourself" });
         }
-        const userToFollow = await User.findById(req.params.id);
-        const currentUser = await User.findById(req.user.id);
+
+        const userToFollow = await User.findById(targetId);
+        const currentUser = await User.findById(currentUserId);
 
         if (!userToFollow || !currentUser) {
+            console.error(`[Social Error] User not found during follow: Target ${targetId}, Current ${currentUserId}`);
             return res.status(404).json({ message: "User not found" });
         }
 
-        const isAlreadyFollowing = userToFollow.followers.some(id => id.toString() === req.user.id);
+        const isAlreadyFollowing = userToFollow.followers.some(id => id.toString() === currentUserId);
         if (!isAlreadyFollowing) {
-            userToFollow.followers.push(req.user.id);
-            currentUser.following.push(req.params.id);
+            userToFollow.followers.push(new mongoose.Types.ObjectId(currentUserId));
+            currentUser.following.push(new mongoose.Types.ObjectId(targetId));
             
             await Promise.all([userToFollow.save(), currentUser.save()]);
-            console.log(`[Social Success] ${req.user.id} followed ${req.params.id}`);
+            console.log(`[Social Success] ${currentUserId} followed ${targetId}`);
             return res.json({ message: "User followed successfully" });
         } else {
-            console.log(`[Social Info] ${req.user.id} already following ${req.params.id}`);
+            console.log(`[Social Info] ${currentUserId} already following ${targetId}`);
             return res.status(400).json({ message: "You already follow this user" });
         }
     } catch (err) {
-        console.error(err);
+        console.error(`[Social Error] Critical error in followUser:`, err);
         res.status(500).send('Server Error');
     }
 };
 
 exports.unfollowUser = async (req, res) => {
     try {
-        if (req.user.id === req.params.id) {
+        const targetId = req.params.id;
+        const currentUserId = req.user.id;
+
+        if (currentUserId === targetId) {
             return res.status(400).json({ message: "You cannot unfollow yourself" });
         }
-        const userToUnfollow = await User.findById(req.params.id);
-        const currentUser = await User.findById(req.user.id);
+        const userToUnfollow = await User.findById(targetId);
+        const currentUser = await User.findById(currentUserId);
 
         if (!userToUnfollow || !currentUser) {
+            console.error(`[Social Error] User not found during unfollow: Target ${targetId}, Current ${currentUserId}`);
             return res.status(404).json({ message: "User not found" });
         }
 
-        const isFollowing = userToUnfollow.followers.some(id => id.toString() === req.user.id);
+        const isFollowing = userToUnfollow.followers.some(id => id.toString() === currentUserId);
         if (isFollowing) {
-            userToUnfollow.followers = userToUnfollow.followers.filter(id => id.toString() !== req.user.id);
-            currentUser.following = currentUser.following.filter(id => id.toString() !== req.params.id);
+            userToUnfollow.followers = userToUnfollow.followers.filter(id => id.toString() !== currentUserId);
+            currentUser.following = currentUser.following.filter(id => id.toString() !== targetId);
             
             await Promise.all([userToUnfollow.save(), currentUser.save()]);
-            console.log(`[Social Success] ${req.user.id} unfollowed ${req.params.id}`);
+            console.log(`[Social Success] ${currentUserId} unfollowed ${targetId}`);
             return res.json({ message: "User unfollowed successfully" });
         } else {
-            console.log(`[Social Info] ${req.user.id} not following ${req.params.id}`);
+            console.log(`[Social Info] ${currentUserId} not following ${targetId}`);
             return res.status(400).json({ message: "You are not following this user" });
         }
     } catch (err) {
-        console.error(err);
+        console.error(`[Social Error] Critical error in unfollowUser:`, err);
         res.status(500).send('Server Error');
     }
 };

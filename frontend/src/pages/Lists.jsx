@@ -455,7 +455,7 @@ const Lists = () => {
                                 <input
                                     type="text"
                                     value={editingList.name}
-                                    onChange={e => setEditingList({ ...editingList, name: e.target.value })}
+                                    onChange={e => setEditingList({ ....editingList, name: e.target.value })}
                                     style={{ 
                                         width: '100%', 
                                         padding: '12px 16px', 
@@ -474,7 +474,7 @@ const Lists = () => {
                                 <textarea
                                     rows="3"
                                     value={editingList.description}
-                                    onChange={e => setEditingList({ ...editingList, description: e.target.value })}
+                                    onChange={e => setEditingList({ ....editingList, description: e.target.value })}
                                     style={{ 
                                         width: '100%', 
                                         padding: '12px 16px', 
@@ -503,7 +503,7 @@ const Lists = () => {
                                     <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Diğer üyeler bu listeyi görebilir.</div>
                                 </div>
                                 <div 
-                                    onClick={() => setEditingList({ ...editingList, isPublic: !editingList.isPublic })}
+                                    onClick={() => setEditingList({ ....editingList, isPublic: !editingList.isPublic })}
                                     style={{
                                         width: '50px',
                                         height: '26px',

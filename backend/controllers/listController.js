@@ -166,6 +166,7 @@ exports.deleteList = async (req, res) => {
 exports.updateList = async (req, res) => {
     try {
         const { name, description, isPublic } = req.body;
+        console.log(`[List Update Request] ID: ${req.params.id}, Public: ${isPublic}, Name: ${name}`);
         const list = await List.findById(req.params.id);
         
         if (!list) return res.status(404).json({ message: 'List not found' });
@@ -176,8 +177,12 @@ exports.updateList = async (req, res) => {
         if (isPublic !== undefined) list.isPublic = isPublic;
 
         await list.save();
+        console.log(`[List Update Success] ID: ${req.params.id}, Final isPublic: ${list.isPublic}`);
         res.json(list);
-    } catch (err) { res.status(500).send('Server Error'); }
+    } catch (err) { 
+        console.error(`[List Update Error]`, err);
+        res.status(500).send('Server Error'); 
+    }
 };
 
 exports.toggleListLike = async (req, res) => {

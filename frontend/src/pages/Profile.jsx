@@ -61,7 +61,9 @@ const Profile = () => {
             showToast("Takip etmek için giriş yapmalısınız.", 'error');
             return;
         }
+        if (isSubmitting) return;
 
+        setIsSubmitting(true);
         try {
             if (isFollowing) {
                 await api.post(`/auth/unfollow/${profileData.user._id}`);
@@ -77,6 +79,8 @@ const Profile = () => {
         } catch (err) {
             console.error("Follow error", err);
             showToast("Bir hata oluştu.", 'error');
+        } finally {
+            setIsSubmitting(false);
         }
     };
 
@@ -382,6 +386,7 @@ const Profile = () => {
                         </div>
                     </div>
                 </div>
+            )}
         </div>
         {editingReview && (
                 <div style={{
