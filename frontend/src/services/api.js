@@ -1,32 +1,25 @@
 import axios from 'axios';
 
 const api = axios.create({
-    baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5000/api', // Backend URL
-    timeout: 60000, // Extend timeout to 60 seconds for Render cold starts
+    baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5000/api',
+    timeout: 60000,
 });
 
-// Retry Interceptor for Render Free Tier (Cold Start)
-api.interceptors.response.use(undefined, async (err) => {
-    const { config, response } = err;
-    if (!config || !config.retry || response?.status !== 503) {
-        if (config && (response?.status === 503 || err.code === 'ECONNABORTED')) {
-            config.retry = (config.retry || 0) + 1;
-            if (config.retry <= 3) {
-                console.log(`Render is waking up... Retry attempt ${config.retry}`);
-                await new Promise(resolve => setTimeout(resolve, 3000)); // Wait 3 seconds
-                return api(config);
-            }
-        }
-        return Promise.reject(err);
-    }
-    return Promise.reject(err);
-});
-
-// Simple Get Request Cache (30 seconds)
+// Simple Get Request Cache (15 seconds - short enough to feel fresh)
 const cache = new Map();
-const CACHE_DURATION = 30000; 
+const CACHE_DURATION = 15000;
 
-// Add a request interceptor to append JWT token and handle cache
+export const clearCache = (urlPattern) => {
+    if (!urlPattern) {
+        cache.clear();
+    } else {
+        for (const key of cache.keys()) {
+            if (key.includes(urlPattern)) cache.delete(key);
+        }
+    }
+};
+
+// Request interceptor: attach token + serve cache for GETs
 api.interceptors.request.use(
     (config) => {
         const token = localStorage.getItem('token');
@@ -37,36 +30,52 @@ api.interceptors.request.use(
         if (config.method === 'get') {
             const cached = cache.get(config.url);
             if (cached && (Date.now() - cached.time < CACHE_DURATION)) {
-                return Promise.resolve({ ...cached.response, isCached: true });
+                // Return a resolved promise with cached data
+                config.adapter = () => Promise.resolve({ ...cached.response, config });
             }
         }
 
         return config;
     },
-    (error) => {
-        return Promise.reject(error);
-    }
+    (error) => Promise.reject(error)
 );
 
-// Add a response interceptor to handle 401 errors and populate cache
+// Response interceptor: cache GETs, invalidate on mutations, handle 401
 api.interceptors.response.use(
     (response) => {
         try {
-            if (response.config && response.config.method === 'get' && !response.isCached) {
+            const method = response.config?.method;
+            if (method === 'get') {
                 cache.set(response.config.url, { response, time: Date.now() });
+            } else if (['post', 'put', 'patch', 'delete'].includes(method)) {
+                // Any mutation clears all cache so pages show fresh data instantly
+                cache.clear();
             }
         } catch (e) {
-            // Ignore cache errors - don't let them break successful responses
+            // Never let cache logic break a successful response
         }
         return response;
     },
-    (error) => {
-        if (error.response && error.response.status === 401) {
-            // Token is invalid or expired
+    async (error) => {
+        // Handle 401 - token expired
+        if (error.response?.status === 401) {
             localStorage.removeItem('token');
             localStorage.removeItem('user');
             window.location.href = '/login?expired=true';
+            return Promise.reject(error);
         }
+
+        // Retry on 503 or timeout (Render cold start)
+        const config = error.config;
+        if (config && (error.response?.status === 503 || error.code === 'ECONNABORTED')) {
+            config._retryCount = (config._retryCount || 0) + 1;
+            if (config._retryCount <= 3) {
+                console.log(`Render waking up... retry ${config._retryCount}`);
+                await new Promise(r => setTimeout(r, 3000));
+                return api(config);
+            }
+        }
+
         return Promise.reject(error);
     }
 );

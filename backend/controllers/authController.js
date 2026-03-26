@@ -208,34 +208,36 @@ exports.followUser = async (req, res) => {
         const targetId = req.params.id;
         const currentUserId = req.user.id;
 
+        console.log(`[Social] followUser called: currentUserId=${currentUserId}, targetId=${targetId}`);
+
         if (currentUserId === targetId) {
-            return res.status(400).json({ message: "You cannot follow yourself" });
+            return res.status(400).json({ message: "Kendinizi takip edemezsiniz" });
+        }
+
+        if (!mongoose.Types.ObjectId.isValid(targetId) || !mongoose.Types.ObjectId.isValid(currentUserId)) {
+            return res.status(400).json({ message: "Geçersiz kullanıcı kimliği" });
         }
 
         const userToFollow = await User.findById(targetId);
-        const currentUser = await User.findById(currentUserId);
-
-        if (!userToFollow || !currentUser) {
-            console.error(`[Social Error] User not found during follow: Target ${targetId}, Current ${currentUserId}`);
-            return res.status(404).json({ message: "User not found" });
+        if (!userToFollow) {
+            return res.status(404).json({ message: "Kullanıcı bulunamadı" });
         }
 
-        const isAlreadyFollowing = userToFollow.followers.some(id => id.toString() === currentUserId);
-        if (!isAlreadyFollowing) {
-            userToFollow.followers.push(new mongoose.Types.ObjectId(currentUserId));
-            currentUser.following.push(new mongoose.Types.ObjectId(targetId));
-            
-            console.log(`[Social Debug] Saving users... Target: ${targetId}, Current: ${currentUserId}`);
-            await Promise.all([userToFollow.save(), currentUser.save()]);
-            console.log(`[Social Success] ${currentUserId} followed ${targetId}`);
-            return res.json({ message: "User followed successfully" });
-        } else {
-            console.log(`[Social Info] ${currentUserId} already following ${targetId}`);
-            return res.status(400).json({ message: "You already follow this user" });
-        }
+        // Atomic update - no save() needed, no validation issues
+        await User.updateOne(
+            { _id: targetId },
+            { $addToSet: { followers: new mongoose.Types.ObjectId(currentUserId) } }
+        );
+        await User.updateOne(
+            { _id: currentUserId },
+            { $addToSet: { following: new mongoose.Types.ObjectId(targetId) } }
+        );
+
+        console.log(`[Social Success] ${currentUserId} followed ${targetId}`);
+        return res.json({ message: "Takip edildi" });
     } catch (err) {
-        console.error(`[Social Error] Critical error in followUser:`, err);
-        res.status(500).send('Server Error');
+        console.error(`[Social Error] followUser:`, err);
+        return res.status(500).json({ message: "Sunucu hatası: " + err.message });
     }
 };
 
@@ -244,33 +246,31 @@ exports.unfollowUser = async (req, res) => {
         const targetId = req.params.id;
         const currentUserId = req.user.id;
 
+        console.log(`[Social] unfollowUser called: currentUserId=${currentUserId}, targetId=${targetId}`);
+
         if (currentUserId === targetId) {
-            return res.status(400).json({ message: "You cannot unfollow yourself" });
-        }
-        const userToUnfollow = await User.findById(targetId);
-        const currentUser = await User.findById(currentUserId);
-
-        if (!userToUnfollow || !currentUser) {
-            console.error(`[Social Error] User not found during unfollow: Target ${targetId}, Current ${currentUserId}`);
-            return res.status(404).json({ message: "User not found" });
+            return res.status(400).json({ message: "Kendinizi takipten çıkaramazsınız" });
         }
 
-        const isFollowing = userToUnfollow.followers.some(id => id.toString() === currentUserId);
-        if (isFollowing) {
-            userToUnfollow.followers = userToUnfollow.followers.filter(id => id.toString() !== currentUserId);
-            currentUser.following = currentUser.following.filter(id => id.toString() !== targetId);
-            
-            console.log(`[Social Debug] Unfollowing users... Target: ${targetId}, Current: ${currentUserId}`);
-            await Promise.all([userToUnfollow.save(), currentUser.save()]);
-            console.log(`[Social Success] ${currentUserId} unfollowed ${targetId}`);
-            return res.json({ message: "User unfollowed successfully" });
-        } else {
-            console.log(`[Social Info] ${currentUserId} not following ${targetId}`);
-            return res.status(400).json({ message: "You are not following this user" });
+        if (!mongoose.Types.ObjectId.isValid(targetId) || !mongoose.Types.ObjectId.isValid(currentUserId)) {
+            return res.status(400).json({ message: "Geçersiz kullanıcı kimliği" });
         }
+
+        // Atomic update - no save() needed, no validation issues
+        await User.updateOne(
+            { _id: targetId },
+            { $pull: { followers: new mongoose.Types.ObjectId(currentUserId) } }
+        );
+        await User.updateOne(
+            { _id: currentUserId },
+            { $pull: { following: new mongoose.Types.ObjectId(targetId) } }
+        );
+
+        console.log(`[Social Success] ${currentUserId} unfollowed ${targetId}`);
+        return res.json({ message: "Takipten çıkıldı" });
     } catch (err) {
-        console.error(`[Social Error] Critical error in unfollowUser:`, err);
-        res.status(500).send('Server Error');
+        console.error(`[Social Error] unfollowUser:`, err);
+        return res.status(500).json({ message: "Sunucu hatası: " + err.message });
     }
 };
 

@@ -67,14 +67,17 @@ const Profile = () => {
         try {
             if (isFollowing) {
                 await api.post(`/auth/unfollow/${profileData.user._id}`);
-                setIsFollowing(false);
-                setFollowersCount(prev => prev - 1);
                 showToast("Takipten çıkıldı.", 'success');
             } else {
                 await api.post(`/auth/follow/${profileData.user._id}`);
-                setIsFollowing(true);
-                setFollowersCount(prev => prev + 1);
                 showToast("Takip edildi.", 'success');
+            }
+            // Re-fetch profile so follower/following counts update instantly
+            const res = await api.get(`/auth/profile/${targetUserId}`);
+            setProfileData(res.data);
+            setFollowersCount(res.data.user.followers?.length || 0);
+            if (myUser && res.data.user.followers) {
+                setIsFollowing(res.data.user.followers.some(f => (f._id || f).toString() === myUser.id));
             }
         } catch (err) {
             console.error("Follow error:", err.response?.data || err.message);
