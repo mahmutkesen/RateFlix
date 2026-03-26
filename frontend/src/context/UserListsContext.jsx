@@ -27,9 +27,18 @@ export const UserListsProvider = ({ children }) => {
     };
 
     useEffect(() => {
+        const handleStorageChange = () => {
+            const newToken = localStorage.getItem('token');
+            if (newToken !== token) {
+                window.location.reload(); // Hard refresh on token change for safety
+            }
+        };
+        window.addEventListener('storage', handleStorageChange);
+        
         if (token) {
-            fetchUserLists();
+            fetchUserLists(true);
         }
+        return () => window.removeEventListener('storage', handleStorageChange);
     }, [token]);
 
     const refreshLists = () => fetchUserLists(true);

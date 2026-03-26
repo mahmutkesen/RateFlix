@@ -18,6 +18,7 @@ const Profile = () => {
     const { showToast } = useToast();
     const [expandedListId, setExpandedListId] = useState(null);
     const [confirmDelete, setConfirmDelete] = useState({ isOpen: false, type: null, id: null });
+    const [editingReview, setEditingReview] = useState(null);
     const [showFollowers, setShowFollowers] = useState(false);
     const [showFollowing, setShowFollowing] = useState(false);
 
@@ -115,6 +116,28 @@ const Profile = () => {
         }
     };
 
+    const handleUpdateReview = async (e) => {
+        e.preventDefault();
+        try {
+            await api.post('/reviews', {
+                tmdbId: editingReview.tmdbId,
+                mediaType: editingReview.mediaType,
+                rating: editingReview.rating,
+                reviewText: editingReview.reviewText,
+                movieTitle: editingReview.movieTitle,
+                posterPath: editingReview.posterPath
+            });
+            setProfileData({
+                ...profileData,
+                reviews: profileData.reviews.map(r => r._id === editingReview.id ? { ...r, rating: editingReview.rating, reviewText: editingReview.reviewText } : r)
+            });
+            setEditingReview(null);
+            showToast('İnceleme güncellendi.', 'success');
+        } catch (error) {
+            showToast('Güncelleme başarısız.', 'error');
+        }
+    };
+
     if (loading) return (
         <div className="loading-container" style={{ paddingTop: '100px' }}>
             <div className="spinner"></div>
@@ -135,6 +158,57 @@ const Profile = () => {
 
     return (
         <div className="profile-page animate-fade-in" style={{ padding: '2rem' }}>
+            {editingReview && (
+                <div style={{
+                    position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+                    background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(12px)', zIndex: 1000,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem'
+                }} onClick={() => setEditingReview(null)}>
+                    <form
+                        onSubmit={handleUpdateReview}
+                        className="glass-panel animate-scale-up"
+                        style={{ 
+                            padding: '2.5rem', 
+                            width: '100%', 
+                            maxWidth: '500px', 
+                            border: '1px solid rgba(255,255,255,0.15)',
+                            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)'
+                        }}
+                        onClick={e => e.stopPropagation()}
+                    >
+                        <h2 style={{ marginBottom: '1.5rem', color: 'var(--primary-color)', textAlign: 'center' }}>İncelemeyi Düzenle</h2>
+                        
+                        <div className="form-group" style={{ marginBottom: '1.5rem', textAlign: 'center' }}>
+                            <label style={{ display: 'block', marginBottom: '0.5rem' }}>Puanınız</label>
+                            <RatingStars rating={editingReview.rating} onChange={(val) => setEditingReview({ ...editingReview, rating: val })} />
+                        </div>
+
+                        <div className="form-group" style={{ marginBottom: '1.5rem' }}>
+                            <label style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '0.5rem', display: 'block' }}>Yorumunuz</label>
+                            <textarea
+                                rows="4"
+                                value={editingReview.reviewText}
+                                onChange={e => setEditingReview({ ...editingReview, reviewText: e.target.value })}
+                                style={{ 
+                                    width: '100%', 
+                                    padding: '12px 16px', 
+                                    fontSize: '1rem',
+                                    background: 'rgba(255,255,255,0.05)',
+                                    border: '1px solid rgba(255,255,255,0.1)',
+                                    borderRadius: '12px',
+                                    color: '#fff',
+                                    resize: 'none'
+                                }}
+                            />
+                        </div>
+
+                        <div style={{ display: 'flex', gap: '1rem' }}>
+                            <button type="submit" className="btn-primary" style={{ flex: 1, padding: '14px', borderRadius: '12px', fontWeight: 700 }}>Güncelle</button>
+                            <button type="button" className="btn-secondary" style={{ flex: 1, padding: '14px', borderRadius: '12px', background: 'rgba(255,255,255,0.1)', border: 'none', color: '#fff' }} onClick={() => setEditingReview(null)}>Vazgeç</button>
+                        </div>
+                    </form>
+                </div>
+            )}
             <div className="glass-panel" style={{ padding: '2rem', display: 'flex', gap: '2rem', alignItems: 'center', marginBottom: '2rem', borderRadius: '15px' }}>
                 <div style={{ width: '100px', height: '100px', borderRadius: '50%', background: 'linear-gradient(135deg, var(--primary-color), #f39c12)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '3rem', color: '#000', fontWeight: 'bold' }}>
                     {user.profilePic ? <img src={user.profilePic} alt={user.username} style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} /> : user.username.charAt(0).toUpperCase()}
@@ -194,9 +268,25 @@ const Profile = () => {
                                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
                                             <span><FaClock style={{ marginRight: '0.3rem' }} /> {new Date(review.createdAt).toLocaleDateString('tr-TR')}</span>
                                             {(isMyProfile || myUser?.role === 'admin') && (
-                                                <button onClick={() => handleDeleteReview(review._id)} style={{ background: 'none', border: 'none', color: '#ff7675', cursor: 'pointer' }} title="Sil">
-                                                    <FaTrash />
-                                                </button>
+                                                <div style={{ display: 'flex', gap: '8px' }}>
+                                                    <button 
+                                                        onClick={() => setEditingReview({ 
+                                                            id: review._id, 
+                                                            tmdbId: review.tmdbId, 
+                                                            mediaType: review.mediaType,
+                                                            rating: review.rating, 
+                                                            reviewText: review.reviewText,
+                                                            movieTitle: review.movieTitle,
+                                                            posterPath: review.posterPath
+                                                        })} 
+                                                        style={{ background: 'none', border: 'none', color: 'var(--primary-color)', cursor: 'pointer', fontSize: '0.8rem' }}
+                                                    >
+                                                        Düzenle
+                                                    </button>
+                                                    <button onClick={() => handleDeleteReview(review._id)} style={{ background: 'none', border: 'none', color: '#ff7675', cursor: 'pointer' }} title="Sil">
+                                                        <FaTrash />
+                                                    </button>
+                                                </div>
                                             )}
                                         </div>
                                     </div>

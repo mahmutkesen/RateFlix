@@ -168,65 +168,182 @@ const Lists = () => {
                                 placeholder="Bu liste hakkında kısa bir açıklama..."
                             />
                         </div>
-                        <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: '0.8rem', marginTop: '1rem', marginBottom: '1.5rem', cursor: 'pointer' }} onClick={() => setIsPublic(!isPublic)}>
-                            <input
-                                type="checkbox"
-                                checked={isPublic}
-                                onChange={e => setIsPublic(e.target.checked)}
-                                style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: 'var(--primary-color)' }}
-                            />
-                            <label style={{ margin: 0, cursor: 'pointer', fontSize: '0.95rem', color: isPublic ? 'var(--primary-color)' : '#bbb' }}>
-                                Toplulukla Paylaş (Diğer üyeler bu listeyi görebilir)
-                            </label>
+                        <div className="form-group" style={{ 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            justifyContent: 'space-between', 
+                            background: 'rgba(255,255,255,0.05)',
+                            padding: '1rem',
+                            borderRadius: '12px',
+                            marginBottom: '1.5rem',
+                            cursor: 'pointer'
+                        }} onClick={() => setIsPublic(!isPublic)}>
+                            <div>
+                                <div style={{ fontWeight: 600, fontSize: '0.95rem', color: '#fff' }}>Toplulukla Paylaş</div>
+                                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Diğer üyeler görebilir.</div>
+                            </div>
+                            <div 
+                                style={{
+                                    width: '44px',
+                                    height: '24px',
+                                    background: isPublic ? 'var(--primary-color)' : 'rgba(255,255,255,0.2)',
+                                    borderRadius: '12px',
+                                    position: 'relative',
+                                    transition: 'all 0.3s'
+                                }}
+                            >
+                                <div style={{
+                                    width: '18px',
+                                    height: '18px',
+                                    background: '#fff',
+                                    borderRadius: '50%',
+                                    position: 'absolute',
+                                    top: '3px',
+                                    left: isPublic ? '23px' : '3px',
+                                    transition: 'all 0.3s'
+                                }}></div>
+                            </div>
                         </div>
-                        <button type="submit" className="btn-primary" disabled={isCreating}>
-                            {isCreating ? 'Oluşturuluyor...' : 'Liste Oluştur'}
-                        </button>
+
+                        <div style={{ display: 'flex', gap: '1rem' }}>
+                            <button type="submit" className="btn-primary" disabled={isCreating} style={{ flex: 1, padding: '12px', borderRadius: '10px' }}>
+                                {isCreating ? 'Oluşturuluyor...' : 'Listeyi Oluştur'}
+                            </button>
+                            <button 
+                                type="button" 
+                                className="btn-secondary" 
+                                onClick={() => setShowForm(false)} 
+                                style={{ 
+                                    flex: 1, 
+                                    padding: '12px', 
+                                    borderRadius: '10px',
+                                    background: 'rgba(255,255,255,0.1)',
+                                    color: '#fff',
+                                    border: 'none'
+                                }}
+                            >
+                                Vazgeç
+                            </button>
+                        </div>
                     </form>
                 )}
                 {/* Edit List Modal/Form */}
                 {editingList && (
                     <div style={{
                         position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-                        background: 'rgba(0,0,0,0.8)', zIndex: 1000,
+                        background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(12px)', zIndex: 1000,
                         display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem'
                     }} onClick={() => setEditingList(null)}>
                         <form
                             onSubmit={handleUpdateList}
-                            className="glass-panel"
-                            style={{ padding: '2rem', width: '100%', maxWidth: '500px' }}
+                            className="glass-panel animate-scale-up"
+                            style={{ 
+                                padding: '2.5rem', 
+                                width: '100%', 
+                                maxWidth: '500px', 
+                                border: '1px solid rgba(255,255,255,0.15)',
+                                boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)'
+                            }}
                             onClick={e => e.stopPropagation()}
                         >
-                            <h3 style={{ marginBottom: '1.5rem', color: 'var(--primary-color)' }}>Listeyi Düzenle</h3>
-                            <div className="form-group">
-                                <label>Liste Adı</label>
+                            <h2 style={{ marginBottom: '1.5rem', color: 'var(--primary-color)', textAlign: 'center', fontSize: '1.8rem' }}>Listeyi Düzenle</h2>
+                            
+                            <div className="form-group" style={{ marginBottom: '1.5rem' }}>
+                                <label style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '0.5rem', display: 'block' }}>Liste Adı</label>
                                 <input
                                     type="text"
                                     value={editingList.name}
                                     onChange={e => setEditingList({ ...editingList, name: e.target.value })}
+                                    style={{ 
+                                        width: '100%', 
+                                        padding: '12px 16px', 
+                                        fontSize: '1.05rem',
+                                        background: 'rgba(255,255,255,0.05)',
+                                        border: '1px solid rgba(255,255,255,0.1)',
+                                        borderRadius: '12px',
+                                        color: '#fff'
+                                    }}
                                     required
                                 />
                             </div>
-                            <div className="form-group">
-                                <label>Açıklama</label>
-                                <input
-                                    type="text"
+
+                            <div className="form-group" style={{ marginBottom: '1.5rem' }}>
+                                <label style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '0.5rem', display: 'block' }}>Açıklama</label>
+                                <textarea
+                                    rows="3"
                                     value={editingList.description}
                                     onChange={e => setEditingList({ ...editingList, description: e.target.value })}
+                                    style={{ 
+                                        width: '100%', 
+                                        padding: '12px 16px', 
+                                        fontSize: '1rem',
+                                        background: 'rgba(255,255,255,0.05)',
+                                        border: '1px solid rgba(255,255,255,0.1)',
+                                        borderRadius: '12px',
+                                        color: '#fff',
+                                        resize: 'none'
+                                    }}
+                                    placeholder="Liste hakkında kısa bir bilgi..."
                                 />
                             </div>
-                            <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: '0.8rem', marginTop: '1rem', marginBottom: '1.5rem' }}>
-                                <input
-                                    type="checkbox"
-                                    checked={editingList.isPublic}
-                                    onChange={e => setEditingList({ ...editingList, isPublic: e.target.checked })}
-                                    id="editIsPublic"
-                                />
-                                <label htmlFor="editIsPublic" style={{ margin: 0 }}>Toplulukla Paylaş</label>
+
+                            <div style={{ 
+                                display: 'flex', 
+                                alignItems: 'center', 
+                                justifyContent: 'space-between', 
+                                background: 'rgba(255,255,255,0.05)',
+                                padding: '1rem',
+                                borderRadius: '12px',
+                                marginBottom: '2rem'
+                            }}>
+                                <div>
+                                    <div style={{ fontWeight: 600, fontSize: '1rem', color: '#fff' }}>Toplulukla Paylaş</div>
+                                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Diğer üyeler bu listeyi görebilir.</div>
+                                </div>
+                                <div 
+                                    onClick={() => setEditingList({ ...editingList, isPublic: !editingList.isPublic })}
+                                    style={{
+                                        width: '50px',
+                                        height: '26px',
+                                        background: editingList.isPublic ? 'var(--primary-color)' : 'rgba(255,255,255,0.2)',
+                                        borderRadius: '13px',
+                                        position: 'relative',
+                                        cursor: 'pointer',
+                                        transition: 'all 0.3s'
+                                    }}
+                                >
+                                    <div style={{
+                                        width: '20px',
+                                        height: '20px',
+                                        background: '#fff',
+                                        borderRadius: '50%',
+                                        position: 'absolute',
+                                        top: '3px',
+                                        left: editingList.isPublic ? '27px' : '3px',
+                                        transition: 'all 0.3s',
+                                        boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+                                    }}></div>
+                                </div>
                             </div>
+
                             <div style={{ display: 'flex', gap: '1rem' }}>
-                                <button type="submit" className="btn-primary" style={{ flex: 1 }}>Güncelle</button>
-                                <button type="button" className="btn-secondary" style={{ flex: 1 }} onClick={() => setEditingList(null)}>İptal</button>
+                                <button type="submit" className="btn-primary" style={{ flex: 1, padding: '14px', borderRadius: '12px', fontWeight: 700 }}>Değişiklikleri Kaydet</button>
+                                <button 
+                                    type="button" 
+                                    className="btn-secondary" 
+                                    style={{ 
+                                        flex: 1, 
+                                        padding: '14px', 
+                                        borderRadius: '12px', 
+                                        fontWeight: 700,
+                                        background: 'rgba(255,255,255,0.1)',
+                                        color: '#fff',
+                                        border: 'none'
+                                    }} 
+                                    onClick={() => setEditingList(null)}
+                                >
+                                    Vazgeç
+                                </button>
                             </div>
                         </form>
                     </div>

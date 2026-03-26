@@ -17,6 +17,7 @@ const Community = () => {
     const [loading, setLoading] = useState(true);
     const [myUser, setMyUser] = useState(JSON.parse(localStorage.getItem('user') || 'null'));
     const [confirmDelete, setConfirmDelete] = useState({ isOpen: false, type: null, id: null, targetId: null });
+    const [editingReview, setEditingReview] = useState(null); // { id, rating, reviewText }
     const { showToast } = useToast();
 
     // New states for Tab and Expansion logic
@@ -169,6 +170,25 @@ const Community = () => {
         setConfirmDelete({ isOpen: true, type: 'comment', id: commentId, targetId });
     };
 
+    const handleUpdateReview = async (e) => {
+        e.preventDefault();
+        try {
+            await api.post('/reviews', {
+                tmdbId: editingReview.tmdbId,
+                mediaType: editingReview.mediaType,
+                rating: editingReview.rating,
+                reviewText: editingReview.reviewText,
+                movieTitle: editingReview.movieTitle,
+                posterPath: editingReview.posterPath
+            });
+            setReviews(reviews.map(r => r._id === editingReview.id ? { ...r, rating: editingReview.rating, reviewText: editingReview.reviewText } : r));
+            setEditingReview(null);
+            showToast('İnceleme güncellendi.', 'success');
+        } catch (error) {
+            showToast('Güncelleme başarısız.', 'error');
+        }
+    };
+
     const renderComments = (targetId, targetType, initialCount = 0) => {
         const isExpanded = expandedComments[targetId];
         const itemComments = comments[targetId] || [];
@@ -274,6 +294,57 @@ const Community = () => {
 
     return (
         <div className="community-page animate-fade-in" style={{ padding: '0 2rem' }}>
+            {editingReview && (
+                <div style={{
+                    position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+                    background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(12px)', zIndex: 1000,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem'
+                }} onClick={() => setEditingReview(null)}>
+                    <form
+                        onSubmit={handleUpdateReview}
+                        className="glass-panel animate-scale-up"
+                        style={{ 
+                            padding: '2.5rem', 
+                            width: '100%', 
+                            maxWidth: '500px', 
+                            border: '1px solid rgba(255,255,255,0.15)',
+                            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)'
+                        }}
+                        onClick={e => e.stopPropagation()}
+                    >
+                        <h2 style={{ marginBottom: '1.5rem', color: 'var(--primary-color)', textAlign: 'center' }}>İncelemeyi Düzenle</h2>
+                        
+                        <div className="form-group" style={{ marginBottom: '1.5rem', textAlign: 'center' }}>
+                            <label style={{ display: 'block', marginBottom: '0.5rem' }}>Puanınız</label>
+                            <RatingStars rating={editingReview.rating} onChange={(val) => setEditingReview({ ...editingReview, rating: val })} />
+                        </div>
+
+                        <div className="form-group" style={{ marginBottom: '1.5rem' }}>
+                            <label style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '0.5rem', display: 'block' }}>Yorumunuz</label>
+                            <textarea
+                                rows="4"
+                                value={editingReview.reviewText}
+                                onChange={e => setEditingReview({ ...editingReview, reviewText: e.target.value })}
+                                style={{ 
+                                    width: '100%', 
+                                    padding: '12px 16px', 
+                                    fontSize: '1rem',
+                                    background: 'rgba(255,255,255,0.05)',
+                                    border: '1px solid rgba(255,255,255,0.1)',
+                                    borderRadius: '12px',
+                                    color: '#fff',
+                                    resize: 'none'
+                                }}
+                            />
+                        </div>
+
+                        <div style={{ display: 'flex', gap: '1rem' }}>
+                            <button type="submit" className="btn-primary" style={{ flex: 1, padding: '14px', borderRadius: '12px', fontWeight: 700 }}>Güncelle</button>
+                            <button type="button" className="btn-secondary" style={{ flex: 1, padding: '14px', borderRadius: '12px', background: 'rgba(255,255,255,0.1)', border: 'none', color: '#fff' }} onClick={() => setEditingReview(null)}>Vazgeç</button>
+                        </div>
+                    </form>
+                </div>
+            )}
             <header className="hero" style={{ padding: '4rem 0 2rem' }}>
                 <h1>Topluluk Merkezi</h1>
                 <p>Diğer RateFlix üyelerinin neler izlediğini keşfedin, incelemeleri okuyun ve listeleri inceleyin.</p>
@@ -396,9 +467,26 @@ const Community = () => {
                                                             <FaThumbsDown size={11} /> {reactions[review._id]?.dislikes || 0}
                                                         </button>
                                                         {myUser && (myUser.id === review.user?._id || myUser.id === review.user || myUser.role === 'admin') && (
-                                                            <button onClick={() => handleDeleteReview(review._id)} style={{ background: 'none', border: 'none', color: '#ff7675', cursor: 'pointer' }} title="Sil">
-                                                                <FaTrash />
-                                                            </button>
+                                                            <div style={{ display: 'flex', gap: '8px' }}>
+                                                                <button 
+                                                                    onClick={() => setEditingReview({ 
+                                                                        id: review._id, 
+                                                                        tmdbId: review.tmdbId, 
+                                                                        mediaType: review.mediaType,
+                                                                        rating: review.rating, 
+                                                                        reviewText: review.reviewText,
+                                                                        movieTitle: review.movieTitle,
+                                                                        posterPath: review.posterPath
+                                                                    })} 
+                                                                    style={{ background: 'none', border: 'none', color: 'var(--primary-color)', cursor: 'pointer', fontSize: '0.9rem' }} 
+                                                                    title="Düzenle"
+                                                                >
+                                                                    Düzenle
+                                                                </button>
+                                                                <button onClick={() => handleDeleteReview(review._id)} style={{ background: 'none', border: 'none', color: '#ff7675', cursor: 'pointer' }} title="Sil">
+                                                                    <FaTrash />
+                                                                </button>
+                                                            </div>
                                                         )}
                                                     </div>
                                                 </div>
