@@ -51,8 +51,12 @@ api.interceptors.request.use(
 // Add a response interceptor to handle 401 errors and populate cache
 api.interceptors.response.use(
     (response) => {
-        if (response.config.method === 'get' && !response.isCached) {
-            cache.set(response.config.url, { response, time: Date.now() });
+        try {
+            if (response.config && response.config.method === 'get' && !response.isCached) {
+                cache.set(response.config.url, { response, time: Date.now() });
+            }
+        } catch (e) {
+            // Ignore cache errors - don't let them break successful responses
         }
         return response;
     },
