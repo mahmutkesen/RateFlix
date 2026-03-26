@@ -66,7 +66,7 @@ const MovieDetails = ({ type }) => {
         if (isSubmitting) return;
         setIsSubmitting(true);
         try {
-            await api.post('/reviews', {
+            const res = await api.post('/reviews', {
                 tmdbId: id,
                 mediaType: type,
                 rating: myRating,
@@ -75,7 +75,25 @@ const MovieDetails = ({ type }) => {
                 posterPath: details.poster_path
             });
             showToast('İnceleme başarıyla gönderildi!', 'success');
-            fetchDetails(); // Refresh reviews
+            
+            // For editing, update existing. For new, prepend.
+            const user = JSON.parse(localStorage.getItem('user') || 'null');
+            const newReview = { 
+                ...res.data, 
+                user: { 
+                    _id: user.id, 
+                    username: user.username, 
+                    profilePic: user.profilePic 
+                } 
+            };
+            
+            if (isEditingReview) {
+                setUserReviews(prev => prev.map(r => r.user?._id === user.id ? newReview : r));
+            } else {
+                setUserReviews(prev => [newReview, ...prev]);
+                setIsEditingReview(true);
+            }
+            // Also invalidate global cache on backend (happening in controller)
         } catch (err) {
             showToast('İnceleme gönderilirken hata oluştu', 'error');
             console.error(err);
@@ -121,6 +139,7 @@ const MovieDetails = ({ type }) => {
     if (!details) return <div>Bulunamadı</div>;
 
     return (
+        <>
         <div className="movie-details animate-fade-in">
             <div className="backdrop-container" style={{ backgroundImage: `url(${getImageUrl(details.backdrop_path, 'original')})` }}>
                 <div className="backdrop-overlay"></div>
@@ -309,15 +328,16 @@ const MovieDetails = ({ type }) => {
                     )}
                 </div>
             </div>
+        </div>
 
-            <ConfirmModal
+        <ConfirmModal
                 isOpen={confirmDelete.isOpen}
                 title="İncelemeyi Sil"
                 message="Bu incelemeyi silmek istediğinize emin misiniz? Bu işlem geri alınamaz."
                 onConfirm={confirmDeleteReview}
                 onCancel={() => setConfirmDelete({ isOpen: false, reviewId: null })}
             />
-        </div>
+        </>
     );
 };
 

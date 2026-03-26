@@ -17,7 +17,8 @@ const Community = () => {
     const [loading, setLoading] = useState(true);
     const [myUser, setMyUser] = useState(JSON.parse(localStorage.getItem('user') || 'null'));
     const [confirmDelete, setConfirmDelete] = useState({ isOpen: false, type: null, id: null, targetId: null });
-    const [editingReview, setEditingReview] = useState(null); // { id, rating, reviewText }
+    const [editingReview, setEditingReview] = useState(null); 
+    const [isSubmitting, setIsSubmitting] = useState(false);
     const { showToast } = useToast();
 
     // New states for Tab and Expansion logic
@@ -293,6 +294,7 @@ const Community = () => {
     );
 
     return (
+        <>
         <div className="community-page animate-fade-in" style={{ padding: '0 2rem' }}>
             {editingReview && (
                 <div style={{
@@ -644,6 +646,65 @@ const Community = () => {
                 onCancel={() => setConfirmDelete({ isOpen: false, type: null, id: null, targetId: null })}
             />
         </div>
+        {editingReview && (
+            <div style={{
+                position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+                background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(12px)', zIndex: 1000,
+                display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem'
+            }} onClick={() => setEditingReview(null)}>
+                <form 
+                    onSubmit={handleUpdateReview}
+                    className="glass-panel animate-scale-up" 
+                    style={{ 
+                        padding: '2rem', 
+                        width: '100%', 
+                        maxWidth: '500px',
+                        border: '1px solid rgba(255,255,255,0.1)'
+                    }} 
+                    onClick={e => e.stopPropagation()}
+                >
+                    <h2 style={{ marginBottom: '1.5rem', color: 'var(--primary-color)' }}>İncelemeyi Düzenle</h2>
+                    
+                    <div className="form-group" style={{ marginBottom: '1rem' }}>
+                        <label style={{ display: 'block', marginBottom: '0.5rem' }}>Puanınız</label>
+                        <RatingStars 
+                            rating={editingReview.rating} 
+                            onChange={(val) => setEditingReview({...editingReview, rating: val})} 
+                        />
+                    </div>
+
+                    <div className="form-group" style={{ marginBottom: '1.5rem' }}>
+                        <label style={{ display: 'block', marginBottom: '0.5rem' }}>İncelemeniz</label>
+                        <textarea
+                            rows="4"
+                            value={editingReview.reviewText}
+                            onChange={e => setEditingReview({...editingReview, reviewText: e.target.value})}
+                            style={{ 
+                                width: '100%', 
+                                padding: '10px', 
+                                background: 'rgba(255,255,255,0.05)', 
+                                border: '1px solid rgba(255,255,255,0.1)',
+                                borderRadius: '8px',
+                                color: '#fff'
+                            }}
+                        ></textarea>
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '1rem' }}>
+                        <button type="submit" className="btn-primary" style={{ flex: 1 }}>Güncelle</button>
+                        <button 
+                            type="button" 
+                            className="btn-secondary" 
+                            style={{ flex: 1, background: 'rgba(255,255,255,0.1)', color: '#fff', border: 'none' }}
+                            onClick={() => setEditingReview(null)}
+                        >
+                            İptal
+                        </button>
+                    </div>
+                </form>
+            </div>
+        )}
+        </>
     );
 };
 

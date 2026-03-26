@@ -214,13 +214,16 @@ exports.followUser = async (req, res) => {
             return res.status(404).json({ message: "User not found" });
         }
 
-        if (!userToFollow.followers.includes(req.user.id)) {
+        const isAlreadyFollowing = userToFollow.followers.some(id => id.toString() === req.user.id);
+        if (!isAlreadyFollowing) {
             userToFollow.followers.push(req.user.id);
             currentUser.following.push(req.params.id);
             
             await Promise.all([userToFollow.save(), currentUser.save()]);
+            console.log(`[Social Success] ${req.user.id} followed ${req.params.id}`);
             return res.json({ message: "User followed successfully" });
         } else {
+            console.log(`[Social Info] ${req.user.id} already following ${req.params.id}`);
             return res.status(400).json({ message: "You already follow this user" });
         }
     } catch (err) {
@@ -241,14 +244,17 @@ exports.unfollowUser = async (req, res) => {
             return res.status(404).json({ message: "User not found" });
         }
 
-        if (userToUnfollow.followers.includes(req.user.id)) {
+        const isFollowing = userToUnfollow.followers.some(id => id.toString() === req.user.id);
+        if (isFollowing) {
             userToUnfollow.followers = userToUnfollow.followers.filter(id => id.toString() !== req.user.id);
             currentUser.following = currentUser.following.filter(id => id.toString() !== req.params.id);
             
             await Promise.all([userToUnfollow.save(), currentUser.save()]);
+            console.log(`[Social Success] ${req.user.id} unfollowed ${req.params.id}`);
             return res.json({ message: "User unfollowed successfully" });
         } else {
-            return res.status(400).json({ message: "You don't follow this user" });
+            console.log(`[Social Info] ${req.user.id} not following ${req.params.id}`);
+            return res.status(400).json({ message: "You are not following this user" });
         }
     } catch (err) {
         console.error(err);
