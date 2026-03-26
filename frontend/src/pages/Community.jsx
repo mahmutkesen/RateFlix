@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import api from '../services/api';
 import { getImageUrl } from '../services/tmdb';
 import RatingStars from '../components/RatingStars';
@@ -20,6 +20,7 @@ const Community = () => {
     const [editingReview, setEditingReview] = useState(null); 
     const [isSubmitting, setIsSubmitting] = useState(false);
     const { showToast } = useToast();
+    const location = useLocation();
 
     // New states for Tab and Expansion logic
     const [activeTab, setActiveTab] = useState('reviews');
@@ -65,7 +66,7 @@ const Community = () => {
         };
 
         fetchCommunityData();
-    }, []);
+    }, [location.pathname]);
 
     const handleDeleteReview = (id) => {
         setConfirmDelete({ isOpen: true, type: 'review', id });

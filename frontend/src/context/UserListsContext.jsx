@@ -43,8 +43,12 @@ export const UserListsProvider = ({ children }) => {
 
     const refreshLists = () => fetchUserLists(true);
 
+    const updateListLocally = (id, changes) => {
+        setUserLists(prev => prev.map(l => l._id === id ? { ...l, ...changes } : l));
+    };
+
     return (
-        <UserListsContext.Provider value={{ userLists, loading, error, refreshLists }}>
+        <UserListsContext.Provider value={{ userLists, loading, error, refreshLists, updateListLocally }}>
             {children}
         </UserListsContext.Provider>
     );

@@ -8,7 +8,7 @@ import ConfirmModal from '../components/ConfirmModal';
 import { useUserLists } from '../context/UserListsContext';
 
 const Lists = () => {
-    const { userLists: lists, loading, refreshLists } = useUserLists();
+    const { userLists: lists, loading, refreshLists, updateListLocally } = useUserLists();
     const [newListName, setNewListName] = useState('');
     const [newListDesc, setNewListDesc] = useState('');
     const [isPublic, setIsPublic] = useState(false);
@@ -79,8 +79,13 @@ const Lists = () => {
                 description: editingList.description,
                 isPublic: editingList.isPublic
             });
+            // Update local state instantly so badge refreshes without page reload
+            updateListLocally(editingList.id, {
+                name: editingList.name,
+                description: editingList.description,
+                isPublic: editingList.isPublic
+            });
             setEditingList(null);
-            refreshLists();
             showToast('Liste güncellendi.', 'success');
         } catch (error) {
             showToast('Liste güncellenemedi.', 'error');
@@ -90,7 +95,8 @@ const Lists = () => {
     const toggleListVisibility = async (list) => {
         try {
             await api.patch(`/lists/${list._id}`, { isPublic: !list.isPublic });
-            refreshLists();
+            // Instant local update
+            updateListLocally(list._id, { isPublic: !list.isPublic });
             showToast(list.isPublic ? 'Liste topluluktan kaldırıldı.' : 'Liste toplulukla paylaşıldı.', 'success');
         } catch (error) {
             showToast('İşlem başarısız oldu.', 'error');
@@ -455,7 +461,7 @@ const Lists = () => {
                                 <input
                                     type="text"
                                     value={editingList.name}
-                                    onChange={e => setEditingList({ ....editingList, name: e.target.value })}
+                                    onChange={e => setEditingList({ ...editingList, name: e.target.value })}
                                     style={{ 
                                         width: '100%', 
                                         padding: '12px 16px', 
@@ -474,7 +480,7 @@ const Lists = () => {
                                 <textarea
                                     rows="3"
                                     value={editingList.description}
-                                    onChange={e => setEditingList({ ....editingList, description: e.target.value })}
+                                    onChange={e => setEditingList({ ...editingList, description: e.target.value })}
                                     style={{ 
                                         width: '100%', 
                                         padding: '12px 16px', 
@@ -503,7 +509,7 @@ const Lists = () => {
                                     <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Diğer üyeler bu listeyi görebilir.</div>
                                 </div>
                                 <div 
-                                    onClick={() => setEditingList({ ....editingList, isPublic: !editingList.isPublic })}
+                                    onClick={() => setEditingList({ ...editingList, isPublic: !editingList.isPublic })}
                                     style={{
                                         width: '50px',
                                         height: '26px',

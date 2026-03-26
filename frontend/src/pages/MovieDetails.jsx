@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { getDetails, getImageUrl } from '../services/tmdb';
 import api from '../services/api';
@@ -24,6 +24,7 @@ const MovieDetails = ({ type }) => {
     const [isAddingToList, setIsAddingToList] = useState(false);
     const token = localStorage.getItem('token');
     const { showToast } = useToast();
+    const reviewsRef = useRef(null);
 
     const fetchDetails = async () => {
         try {
@@ -93,7 +94,10 @@ const MovieDetails = ({ type }) => {
                 setUserReviews(prev => [newReview, ...prev]);
                 setIsEditingReview(true);
             }
-            // Also invalidate global cache on backend (happening in controller)
+            // Scroll to reviews section so user sees the new review
+            setTimeout(() => {
+                reviewsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }, 100);
         } catch (err) {
             showToast('İnceleme gönderilirken hata oluştu', 'error');
             console.error(err);
@@ -293,7 +297,7 @@ const MovieDetails = ({ type }) => {
                     )}
                 </div>
 
-                <div className="user-reviews" style={{ marginTop: '3rem' }}>
+                <div ref={reviewsRef} className="user-reviews" style={{ marginTop: '3rem' }}>
                     <h2>Topluluk İncelemeleri</h2>
                     {userReviews.length === 0 ? (
                         <p style={{ color: 'var(--text-muted)', marginTop: '1rem' }}>Henüz inceleme yok. İlk sen ol!</p>
