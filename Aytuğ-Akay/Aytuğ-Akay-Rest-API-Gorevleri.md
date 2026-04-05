@@ -1,6 +1,6 @@
 # Aytuğ Akay'ın REST API Metotları
 
-**API Test Videosu:** [Link buraya eklenecek](https://example.com)
+**API Test Videosu:** [Youtube](https://youtu.be/kWfPcJinwZY)
 
 # 🎬 Movie App API Documentation
 
@@ -41,19 +41,14 @@ Başarılı girişte JWT veya session anahtarı döner.
 
 ---
 
-### 3. Password Reset (Şifre Sıfırlama)
-**Endpoint:** `POST /api/auth/forgot-password`
-
-**Request Body:**
-    {
-      "email": "string"
-    }
+### 3. Like Review (Yorum Beğenme)
+**Endpoint:** `POST /api/reviews/{reviewId}/like`
 
 **Response:**
 - `200 OK`
 
 **Açıklama:**  
-Kullanıcının e-posta üzerinden şifre sıfırlamasını sağlar.
+Kullanıcıların paylaşılan yorumları beğenmesini veya beğenisini geri çekmesini (toggle) sağlar.
 
 ---
 

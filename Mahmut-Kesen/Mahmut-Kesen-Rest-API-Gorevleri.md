@@ -1,6 +1,6 @@
 # Mahmut Kesen'in REST API Metotları
 
-**API Test Videosu:** [Link buraya eklenecek](https://example.com)
+**API Test Videosu:** [Youtube](https://youtu.be/SxKvopH5xpE)
 
 # 🎬 Movie App API Documentation
 

@@ -1,5 +1,5 @@
 # Aytuğ Akay'ın Web Frontend Görevleri
-**Front-end Test Videosu:** [Link buraya eklenecek](https://example.com)
+**Front-end Test Videosu:** [Youtube](https://youtu.be/GaK-3ZdZjmQ)
 
 # 🎬 Movie App - Functional Requirements
 

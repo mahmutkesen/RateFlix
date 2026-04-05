@@ -17,9 +17,9 @@
 
 ---
 
-### 4. Şifre Sıfırlama (Password Reset)
-**API Metodu:** `POST /api/auth/forgot-password`  
-**Açıklama:** Şifresini unutan kullanıcıların e-posta yoluyla geçici bir kod veya link alarak şifrelerini yenilemelerini sağlar.
+### 4. Yorum Beğenme (Review Like)
+**API Metodu:** `POST /api/reviews/{reviewId}/like`  
+**Açıklama:** Kullanıcıların diğer kişilerin yaptığı yorumları beğenmesini sağlar. Aynı isteğin tekrar atılması beğeniyi geri alacaktır.
 
 ---
 

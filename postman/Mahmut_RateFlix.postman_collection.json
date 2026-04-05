@@ -1,0 +1,167 @@
+{
+  "info": {
+    "_postman_id": "41555d94-ff64-4058-a072-1ca58f33da03",
+    "name": "Mahmut - RateFlix API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "FilmDetay",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "https://rateflix-backend.onrender.com/api/movies/27205",
+          "protocol": "https",
+          "host": ["rateflix-backend", "onrender", "com"],
+          "path": ["api", "movies", "27205"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "PuanVer",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjp7ImlkIjoiNjlkMjUxZWRmZDZjMzA2ZjYzYzNhNDI4Iiwicm9sZSI6InVzZXIifSwiaWF0IjoxNzc1MzkxMjI0LCJleHAiOjE3NzU0MDkyMjR9.wMKbyS-eDLhOH1N3zZGrSdVMNSLgC7-u1z_UZHzFx-U",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"rating\": 4.5}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "https://rateflix-backend.onrender.com/api/movies/27205/rate",
+          "protocol": "https",
+          "host": ["rateflix-backend", "onrender", "com"],
+          "path": ["api", "movies", "27205", "rate"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "FavoriEkle",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "https://rateflix-backend.onrender.com/api/movies/27205/like",
+          "protocol": "https",
+          "host": ["rateflix-backend", "onrender", "com"],
+          "path": ["api", "movies", "27205", "like"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "WatchlisteEkle",
+      "request": {
+        "method": "PUT",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"movieId\": \"27205\"}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "https://rateflix-backend.onrender.com/api/users/67c267da3447cdc0ff750a71/watchlist",
+          "protocol": "https",
+          "host": ["rateflix-backend", "onrender", "com"],
+          "path": ["api", "users", "67c267da3447cdc0ff750a71", "watchlist"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "WatchlisttenSil",
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "https://rateflix-backend.onrender.com/api/users/67c267da3447cdc0ff750a71/watchlist/27205",
+          "protocol": "https",
+          "host": ["rateflix-backend", "onrender", "com"],
+          "path": ["api", "users", "67c267da3447cdc0ff750a71", "watchlist", "27205"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "YorumYaz",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"tmdbId\":\"27205\",\"mediaType\":\"movie\",\"rating\":5,\"reviewText\":\"Efsane!\",\"movieTitle\":\"Inception\"}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "https://rateflix-backend.onrender.com/api/reviews",
+          "protocol": "https",
+          "host": ["rateflix-backend", "onrender", "com"],
+          "path": ["api", "reviews"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "YorumSil",
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "https://rateflix-backend.onrender.com/api/reviews/67c269c4500d810c99fcf600",
+          "protocol": "https",
+          "host": ["rateflix-backend", "onrender", "com"],
+          "path": ["api", "reviews", "67c269c4500d810c99fcf600"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "İzlediklerimeEkle",
+      "request": {
+        "method": "PUT",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"movieId\": \"27205\"}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "https://rateflix-backend.onrender.com/api/users/67c267da3447cdc0ff750a71/watched",
+          "protocol": "https",
+          "host": ["rateflix-backend", "onrender", "com"],
+          "path": ["api", "users", "67c267da3447cdc0ff750a71", "watched"]
+        }
+      },
+      "response": []
+    }
+  ]
+}

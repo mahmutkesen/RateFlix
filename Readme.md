@@ -22,8 +22,8 @@
 
 ## Proje Linkleri
 
-- **REST API Adresi:** [api.yazmuh.com](https://rateflix-backend.onrender.com)
-- **Web Frontend Adresi:** [frontend.yazmuh.com](https://rate-flix-one.vercel.app)
+- **REST API Adresi:** [RateFlix backend adresi](https://rateflix-backend.onrender.com)
+- **Web Frontend Adresi:** [RateFlix frontend adresi](https://rate-flix-one.vercel.app)
 
 ---
 

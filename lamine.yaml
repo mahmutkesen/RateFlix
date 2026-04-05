@@ -79,22 +79,22 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
 
-  /auth/reset-password:
+  /reviews/{reviewId}/like:
     post:
       tags:
-        - auth
-      summary: Şifre Sıfırlama (Password Reset)
-      description: Kullanıcının şifresini sıfırlaması için email üzerinden bağlantı gönderir. (Sorumlu - Aytuğ Akay)
-      operationId: resetPassword
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/PasswordResetRequest'
+        - interactions
+      summary: Yorum Beğenme (Review Like)
+      description: Diğer kullanıcıların yorumlarını beğenmeyi veya beğeniyi geri çekmeyi sağlar. (Sorumlu - Aytuğ Akay)
+      operationId: toggleReviewLike
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ReviewIdParam'
       responses:
         '200':
-          description: Şifre sıfırlama bağlantısı gönderildi
+          description: İşlem başarılı
+        '401':
+          $ref: '#/components/responses/Unauthorized'
         '404':
           $ref: '#/components/responses/NotFound'
 
@@ -496,17 +496,6 @@ components:
           description: Doğrulama için kullanılacak gizli kullanıcı şifresi.
           example: "Guvenli123*"
 
-    PasswordResetRequest:
-      description: Şifresini unutan kullanıcıların, yeni bir şifre talep etmek üzere başlattıkları iletişim verisi.
-      type: object
-      required:
-        - email
-      properties:
-        email:
-          type: string
-          format: email
-          description: Şifre sıfırlama bağlantısının gönderileceği e-posta adresi.
-          example: "kullanici@example.com"
 
     AuthToken:
       description: Başarılı bir oturum açma işleminden sonra uygulamaya gönderilen yetki bilgisi ve token yapısı.

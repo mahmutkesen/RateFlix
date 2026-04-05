@@ -1,5 +1,5 @@
 # Mahmut Kesen'in Web Frontend Görevleri
-**Front-end Test Videosu:** [Link buraya eklenecek](https://example.com)
+**Front-end Test Videosu:** [Youtube](https://youtu.be/PHR6K7M1KrQ)
 
 # 🎬 Movie App - Functional Requirements
 
