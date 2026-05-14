@@ -6,6 +6,7 @@ const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const mongoose = require('mongoose');
 const sendEmail = require('../utils/sendEmail');
+const { publishNotification } = require('../utils/rabbitClient');
 
 // Register
 exports.register = async (req, res) => {
@@ -57,8 +58,21 @@ exports.register = async (req, res) => {
                 message
             }).catch(e => console.error("Welcome email background error:", e));
 
+            // Asenkron Bildirim Fırlat
+            publishNotification({
+                userId: user._id,
+                type: 'SYSTEM',
+                message: `RateFlix'e hoş geldiniz, ${username}!`
+            });
+
             res.status(201).json({ message: 'Kayıt başarılı! Şimdi giriş yapabilirsiniz.' });
         } catch (err) {
+            // Asenkron Bildirim Fırlat
+            publishNotification({
+                userId: user._id,
+                type: 'SYSTEM',
+                message: `RateFlix'e hoş geldiniz, ${username}!`
+            });
             res.status(201).json({ message: 'Kayıt başarılı! Şimdi giriş yapabilirsiniz.' });
         }
 

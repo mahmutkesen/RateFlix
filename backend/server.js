@@ -2,6 +2,9 @@ const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const dotenv = require('dotenv');
+const { initRedis } = require('./utils/redisClient');
+const { initRabbitMQ } = require('./utils/rabbitClient');
+const { startWorker } = require('./workers/notificationWorker');
 
 dotenv.config();
 
@@ -23,13 +26,20 @@ app.use('/api/reviews', require('./routes/reviews'));
 app.use('/api/lists', require('./routes/lists'));
 app.use('/api/comments', require('./routes/comments'));
 app.use('/api/admin', require('./routes/admin'));
+app.use('/api/notifications', require('./routes/notifications'));
 
 // MongoDB Connection
 if (process.env.USE_MEMORY_DB === 'true') {
     console.log('Running in Pure Javascript In-Memory Mode (No MongoDB Dependency)');
+    initRedis();
+    initRabbitMQ().then(() => startWorker());
 } else {
     mongoose.connect(process.env.MONGO_URI)
-        .then(() => console.log('MongoDB Connected'))
+        .then(() => {
+            console.log('MongoDB Connected');
+            initRedis();
+            initRabbitMQ().then(() => startWorker());
+        })
         .catch(err => console.error('MongoDB Connection Error: ', err.message));
 }
 

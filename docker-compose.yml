@@ -1,0 +1,38 @@
+services:
+  # Backend Servisi
+  backend:
+    build: ./backend
+    ports:
+      - "5000:5000"
+    environment:
+      - PORT=5000
+      - MONGO_URI=mongodb+srv://kesenmahmut01_db_user:XgOUYFHoC0thmy4A@rateflix.qunsskp.mongodb.net/rateflix?retryWrites=true&w=majority&appName=RateFlix
+      - JWT_SECRET=super_secret_jwt_key_here_for_rateflix
+      - REDIS_URL=redis://redis:6379
+      - RABBITMQ_URL=amqp://rabbitmq:5672
+    depends_on:
+      - redis
+      - rabbitmq
+
+  # Frontend Servisi
+  frontend:
+    build: ./frontend
+    ports:
+      - "5173:5173"
+    environment:
+      - VITE_API_URL=http://localhost:5000
+    depends_on:
+      - backend
+
+  # Redis Servisi
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+  # RabbitMQ Servisi (Yönetim Paneli Dahil)
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    ports:
+      - "5672:5672"   # RabbitMQ protokolü
+      - "15672:15672" # Yönetim arayüzü (Hocaya göstermek için)

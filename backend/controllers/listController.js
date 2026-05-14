@@ -1,5 +1,6 @@
 const List = require('../models/List');
 const Comment = require('../models/Comment');
+const { publishNotification } = require('../utils/rabbitClient');
 
 let memLists = []; // Memory mock
 
@@ -120,6 +121,14 @@ exports.addItemToList = async (req, res) => {
         if (list.items.some(item => String(item.tmdbId) === String(tmdbId))) return res.status(400).json({ message: 'Item already in list' });
         list.items.unshift({ tmdbId: String(tmdbId), mediaType, posterPath });
         await list.save();
+
+        // Asenkron RabbitMQ Bildirimi Fırlat
+        publishNotification({
+            userId: req.user.id,
+            type: 'LIST_UPDATE',
+            message: `"${list.name}" listenize yeni bir içerik eklendi.`
+        });
+
         res.json(list);
     } catch (err) { res.status(500).send('Server Error'); }
 };

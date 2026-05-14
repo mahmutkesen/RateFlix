@@ -1,6 +1,8 @@
 const axios = require('axios');
 const Review = require('../models/Review');
 const List = require('../models/List');
+const { getCache, setCache } = require('../utils/redisClient');
+const { publishNotification } = require('../utils/rabbitClient');
 
 const TMDB_API_KEY = process.env.TMDB_API_KEY || '4e44d9029b1270a757cddc766a1bcb63';
 const BASE_URL = 'https://api.themoviedb.org/3';
@@ -19,7 +21,20 @@ const tmdb = axios.create({
 exports.getPopularMovies = async (req, res) => {
     try {
         const { page = 1 } = req.query;
+        const cacheKey = `movies:popular:page:${page}`;
+        
+        // 1. Önce Redis'e (Önbelleğe) bak
+        const cachedData = await getCache(cacheKey);
+        if (cachedData) {
+            return res.json(cachedData);
+        }
+
+        // 2. Redis'te yoksa TMDB'den çek
         const response = await tmdb.get(`/movie/popular?page=${page}`);
+        
+        // 3. Çekilen veriyi Redis'e kaydet (1 saat = 3600 saniye)
+        await setCache(cacheKey, response.data, 3600);
+        
         res.json(response.data);
     } catch (error) {
         res.status(500).json({ message: 'Error fetching popular movies' });
@@ -31,7 +46,20 @@ exports.getPopularMovies = async (req, res) => {
 exports.getTopRatedMovies = async (req, res) => {
     try {
         const { page = 1 } = req.query;
+        const cacheKey = `movies:toprated:page:${page}`;
+        
+        // 1. Önce Redis'e bak
+        const cachedData = await getCache(cacheKey);
+        if (cachedData) {
+            return res.json(cachedData);
+        }
+
+        // 2. Redis'te yoksa TMDB'den çek
         const response = await tmdb.get(`/movie/top_rated?page=${page}`);
+        
+        // 3. Veriyi Redis'e kaydet (1 saat)
+        await setCache(cacheKey, response.data, 3600);
+        
         res.json(response.data);
     } catch (error) {
         res.status(500).json({ message: 'Error fetching top rated movies' });
@@ -105,6 +133,13 @@ exports.rateMovie = async (req, res) => {
                 movieTitle: movie.data.title,
                 posterPath: movie.data.poster_path
             });
+
+            // Asenkron Bildirim Fırlat
+            publishNotification({
+                userId,
+                type: 'REVIEW',
+                message: `"${movie.data.title}" filmine başarıyla puan verdiniz.`
+            });
         }
 
         res.json(review);
@@ -142,6 +177,13 @@ exports.likeMovie = async (req, res) => {
                 tmdbId,
                 mediaType: 'movie',
                 posterPath: movie.data.poster_path
+            });
+
+            // Asenkron Bildirim Fırlat (Ana sistemi beklemeden)
+            publishNotification({
+                userId,
+                type: 'FAVORITE',
+                message: `"${movie.data.title}" adlı filmi favorilerinize eklediniz.`
             });
         }
 
