@@ -3,7 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // 10.63.148.85 is the developer's local machine IP on the current network.
 // If your network changes, you need to update this IP or use EXPO_PUBLIC_API_URL.
-const BASE_URL = 'http://10.152.219.167:5000/api';
+const BASE_URL = 'https://rateflix-backend.onrender.com/api';
 
 const api = axios.create({
     baseURL: BASE_URL,
