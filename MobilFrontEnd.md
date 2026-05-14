@@ -6,12 +6,8 @@ Bu dokümanda, mobil uygulamanın kullanıcı arayüzü (UI) ve kullanıcı dene
 
 ## Grup Üyelerinin Mobil Frontend Görevleri
 
-1. [Ali Tutar'ın Mobil Frontend Görevleri](Ali-Tutar/Ali-Tutar-Mobil-Frontend-Gorevleri.md)
-2. [Grup Üyesi 2'nin Mobil Frontend Görevleri](Grup-Uyesi-2/Grup-Uyesi-2-Mobil-Frontend-Gorevleri.md)
-3. [Grup Üyesi 3'ün Mobil Frontend Görevleri](Grup-Uyesi-3/Grup-Uyesi-3-Mobil-Frontend-Gorevleri.md)
-4. [Grup Üyesi 4'ün Mobil Frontend Görevleri](Grup-Uyesi-4/Grup-Uyesi-4-Mobil-Frontend-Gorevleri.md)
-5. [Grup Üyesi 5'in Mobil Frontend Görevleri](Grup-Uyesi-5/Grup-Uyesi-5-Mobil-Frontend-Gorevleri.md)
-6. [Grup Üyesi 6'nın Mobil Frontend Görevleri](Grup-Uyesi-6/Grup-Uyesi-6-Mobil-Frontend-Gorevleri.md)
+1. [Mahmut Kesen'in Mobil Frontend Görevleri](Mahmut-Kesen/Mahmut-Kesen-Mobil-Frontend-Gorevleri.md)
+2. [Aytuğ Akay'ın Mobil Frontend Görevleri](Aytuğ-Akay/Aytuğ-Akay-Mobil-Frontend-Gorevleri.md)
 
 ---
 
@@ -21,7 +17,7 @@ Bu dokümanda, mobil uygulamanın kullanıcı arayüzü (UI) ve kullanıcı dene
 - **Renk Paleti:** Tutarlı renk kullanımı (primary, secondary, error, success)
 - **Tipografi:** Okunabilir font boyutları ve ağırlıkları
 - **Spacing:** Tutarlı padding ve margin değerleri (8dp/8pt grid sistemi)
-- **Iconography:** Standart icon seti kullanımı (Material Icons/SF Symbols)
+- **Iconography:** Standart icon seti kullanımı (Ionicons / Material Icons)
 
 ### 2. Responsive Tasarım
 - Farklı ekran boyutlarına uyum (phone, tablet)
@@ -48,7 +44,7 @@ Bu dokümanda, mobil uygulamanın kullanıcı arayüzü (UI) ve kullanıcı dene
 - Memory management
 
 ### 6. Navigasyon
-- Tutarlı navigation pattern (bottom navigation, drawer, tabs)
+- Tutarlı navigation pattern (bottom navigation, tabs)
 - Deep linking desteği
 - Back button handling
 - Navigation state yönetimi

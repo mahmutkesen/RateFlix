@@ -1,116 +1,69 @@
-# Ali Tutar'ın Mobil Frontend Görevleri
+# Aytuğ Akay'ın Mobil Frontend Görevleri
 **Mobile Front-end Demo Videosu:** [Link buraya eklenecek](https://example.com)
 
-## 1. Üye Olma (Kayıt) Ekranı
-- **API Endpoint:** `POST /auth/register`
-- **Görev:** Kullanıcı kayıt işlemi için mobil ekran tasarımı ve implementasyonu
+## 1. Kullanıcı Kayıt (Sign Up) Ekranı Tasarımı
+- **Görev:** Yeni kullanıcı kayıt arayüzünün tasarımı ve etkileşimi
 - **UI Bileşenleri:**
-  - Email input alanı (keyboard type: email)
-  - Şifre input alanı (secure text entry, şifre gücü göstergesi)
-  - Şifre tekrar input alanı (doğrulama için)
-  - Ad (firstName) input alanı
-  - Soyad (lastName) input alanı
-  - "Kayıt Ol" butonu
-  - "Zaten hesabınız var mı? Giriş Yap" linki
-  - Loading indicator (kayıt işlemi sırasında)
-- **Form Validasyonu:**
-  - Email format kontrolü (real-time validation)
-  - Şifre güvenlik kuralları (min 8 karakter, büyük/küçük harf, rakam)
-  - Şifre eşleşme kontrolü
-  - Ad ve soyad boş olamaz kontrolü
-  - Tüm alanlar doldurulmadan buton disabled
+  - Email ve Şifre giriş alanları (Custom Input)
+  - Kullanıcı Adı belirleme alanı
+  - Kayıt Ol butonu (Loading animasyonlu)
 - **Kullanıcı Deneyimi:**
-  - Form hatalarını alan altında gösterilmesi
-  - Başarılı kayıt sonrası success mesajı ve otomatik giriş ekranına yönlendirme
-  - Hata durumlarında kullanıcı dostu mesajlar (409 Conflict: "Bu email zaten kullanılıyor")
-  - Keyboard dismiss işlevi
-  - ScrollView kullanımı (klavye açıldığında içerik kaybolmasın)
-- **Teknik Detaylar:**
-  - Platform: Android (Jetpack Compose/XML) veya iOS (SwiftUI/UIKit)
-  - State management (form state, loading state, error state)
-  - Navigation (kayıt ekranından giriş ekranına geçiş)
-  - Accessibility desteği (content descriptions, labels)
+  - Şifre yazarken karakterleri gizleme/gösterme (Toggle Visibility)
+  - Klavye açıldığında formun yukarı kayması
 
-## 2. Kullanıcı Profil Görüntüleme Ekranı
-- **API Endpoint:** `GET /users/{userId}`
-- **Görev:** Kullanıcı profil bilgilerini görüntüleme ekranı tasarımı ve implementasyonu
+## 2. Kullanıcı Giriş (Login) Ekranı Tasarımı
+- **Görev:** Giriş ekranı ve kullanıcı oturum başlatma arayüzü
 - **UI Bileşenleri:**
-  - Profil fotoğrafı alanı (placeholder veya gerçek fotoğraf)
-  - Kullanıcı adı ve soyadı (büyük başlık)
-  - Email adresi (ikonlu)
-  - Telefon numarası (ikonlu, varsa)
-  - Hesap oluşturulma tarihi
-  - "Profili Düzenle" butonu
-  - "Hesabı Sil" butonu (kırmızı, alt kısımda)
-  - Pull-to-refresh özelliği
+  - Giriş formu (Email/Username & Password)
+  - "Hesabınız yok mu? Kayıt Ol" yönlendirme linki
 - **Kullanıcı Deneyimi:**
-  - Loading skeleton screen (veri yüklenirken)
-  - Empty state (veri yoksa)
-  - Error state (yükleme hatası durumunda retry butonu)
-  - Smooth scroll animasyonları
-  - Profil fotoğrafı için placeholder avatar
-- **Teknik Detaylar:**
-  - Lazy loading (büyük profil fotoğrafları için)
-  - Image caching
-  - State management (user data, loading, error states)
-  - Navigation (profil düzenleme ekranına geçiş)
-  - Deep linking desteği (profil paylaşımı için)
+  - Başarılı giriş sonrası ana sayfaya akıcı geçiş
 
-## 3. Kullanıcı Profil Düzenleme Ekranı
-- **API Endpoint:** `PUT /users/{userId}`
-- **Görev:** Kullanıcı profil bilgilerini düzenleme ekranı tasarımı ve implementasyonu
+## 3. Yorum Beğenme (Review Like) Etkileşimi
+- **Görev:** Diğer kullanıcıların yorumlarını beğenme butonu tasarımı
 - **UI Bileşenleri:**
-  - Profil fotoğrafı düzenleme (seçme/değiştirme butonu)
-  - Ad (firstName) input alanı (mevcut değerle dolu)
-  - Soyad (lastName) input alanı (mevcut değerle dolu)
-  - Email input alanı (mevcut değerle dolu, düzenlenebilir)
-  - Telefon numarası input alanı (mevcut değerle dolu, format maskesi)
-  - "Kaydet" butonu (sağ üst köşe veya alt kısımda)
-  - "İptal" butonu (sol üst köşe)
-  - Değişiklik yapıldığında "Kaydet" butonu aktif olur
-- **Form Validasyonu:**
-  - Email format kontrolü
-  - Telefon numarası format kontrolü (ülke kodu desteği)
-  - Real-time validation feedback
-  - Değişiklik yoksa "Kaydet" butonu disabled
+  - Yorum kartlarında dinamik kalp ikonu
+  - Beğeni sayısı göstergesi (Text)
 - **Kullanıcı Deneyimi:**
-  - Optimistic update (kaydet butonuna basıldığında UI anında güncellenir)
-  - Başarılı güncelleme sonrası success snackbar/toast
-  - Hata durumunda error mesajı ve değişiklikler geri alınır
-  - "İptal" butonuna basıldığında değişiklik kaybı için onay dialog'u
-  - Keyboard dismiss işlevi
-- **Teknik Detaylar:**
-  - Form state management (initial values, edited values)
-  - Image picker entegrasyonu (galeri/kamera)
-  - Image compression (upload için)
-  - Navigation (geri dönüş, kaydetme sonrası profil ekranına dönüş)
-  - Unsaved changes warning
+  - Beğenme anında ikonun renk değiştirmesi ve sayının artması
 
-## 4. Hesap Silme Akışı
-- **API Endpoint:** `DELETE /users/{userId}`
-- **Görev:** Kullanıcı hesabını silme işlemi için UI akışı tasarımı ve implementasyonu
+## 4. Film/Dizi Arama Arayüzü
+- **Görev:** İsim bazlı içerik arama motoru tasarımı
 - **UI Bileşenleri:**
-  - "Hesabı Sil" butonu (profil ekranında, kırmızı renkli)
-  - Onay dialog'u (destructive action için)
-  - Şifre doğrulama ekranı (güvenlik için opsiyonel)
-  - Son onay ekranı (uyarı mesajları ile)
-  - "Emin misiniz?" dialog'u (çift onay mekanizması)
+  - Dinamik Search Input (X temizleme butonlu)
+  - Arama sonuçları için 2 sütunlu Grid yapısı (FlatList)
 - **Kullanıcı Deneyimi:**
-  - Destructive action için görsel uyarılar (kırmızı renk, ikonlar)
-  - Açık ve net uyarı mesajları ("Bu işlem geri alınamaz")
-  - İptal seçeneği her zaman mevcut
-  - Silme işlemi sırasında loading indicator
-  - Başarılı silme sonrası logout ve login ekranına yönlendirme
-- **Akış Adımları:**
-  1. Profil ekranında "Hesabı Sil" butonuna tıklama
-  2. İlk uyarı dialog'u gösterilmesi
-  3. Onaylandığında şifre doğrulama (opsiyonel)
-  4. Son onay ekranı (detaylı uyarılar)
-  5. Silme işlemi gerçekleştirme
-  6. Başarılı silme sonrası logout ve login ekranına yönlendirme
-- **Teknik Detaylar:**
-  - Dialog/Modal component kullanımı
-  - Multi-step flow yönetimi
-  - Error handling (silme başarısız olursa)
-  - Logout işlemi entegrasyonu
-  - Navigation reset (login ekranına dönüş)
+  - Yazma sırasında anlık sonuç gösterimi
+
+## 5. Kategori/Tür Bazlı Filtreleme Arayüzü
+- **Görev:** Türlere göre içerik keşfetme ekranı tasarımı
+- **UI Bileşenleri:**
+  - Yatay kaydırılabilir Tür (Genre) butonları
+  - Seçilen kategoriye göre güncellenen film listesi
+- **Kullanıcı Deneyimi:**
+  - Kategori değiştiğinde sayfanın başına otomatik dönme
+
+## 6. Popüler İçerikleri Listeleme (Trending) Bölümü
+- **Görev:** Ana sayfada en çok ilgi gören içeriklerin tasarımı
+- **UI Bileşenleri:**
+  - Büyük afişli (Large Card) Trend listesi
+  - Başlık ve IMDB puanı göstergeleri
+- **Kullanıcı Deneyimi:**
+  - Sağ-sol kaydırma (Horizontal Snap) desteği
+
+## 7. En Yüksek Puan Alanlar (Top Rated) Listesi
+- **Görev:** En iyi puanlı filmlerin sıralı gösterimi
+- **UI Bileşenleri:**
+  - Dikey sıralı film kartları (List view)
+  - Sıralama numarası veya Puan vurgusu
+- **Kullanıcı Deneyimi:**
+  - Sonsuz kaydırma (Infinite Scroll) desteği (opsiyonel)
+
+## 8. Admin Kullanıcı Silme Ekranı Tasarımı
+- **Görev:** Yönetici için kullanıcı yönetim paneli tasarımı
+- **UI Bileşenleri:**
+  - Tüm kullanıcıların listelendiği tablo/liste görünümü
+  - "Kullanıcıyı Yasakla/Sil" butonu (Kırmızı)
+- **Kullanıcı Deneyimi:**
+  - Silme öncesi yönetici onayı (Dialog)
+ Broadway

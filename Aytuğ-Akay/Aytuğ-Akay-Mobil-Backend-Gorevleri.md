@@ -1,62 +1,60 @@
-# Ali Tutar'ın Mobil Backend Görevleri
+# Aytuğ Akay'ın Mobil Backend Görevleri
 **Mobil Front-end ile Back-end Bağlanmış Test Videosu:** [Link buraya eklenecek](https://example.com)
 
-## 1. Üye Olma (Kayıt) Servisi
+## 1. Kullanıcı Kayıt (Sign Up) Servis Entegrasyonu
 - **API Endpoint:** `POST /auth/register`
-- **Görev:** Mobil uygulamada kullanıcı kayıt işlemini gerçekleştiren servis entegrasyonu
-- **İşlevler:**
-  - Kullanıcı bilgilerini (email, password, firstName, lastName) toplama
-  - Form validasyonu (email formatı, şifre güvenliği kontrolü)
-  - API'ye POST isteği gönderme
-  - Başarılı kayıt durumunda kullanıcıyı giriş ekranına yönlendirme
-  - Hata durumlarını yakalama ve kullanıcıya gösterilmesi (409 Conflict, 400 Bad Request)
-- **Teknik Detaylar:**
-  - HTTP Client kullanımı (Retrofit/OkHttp - Android, URLSession/Alamofire - iOS)
-  - Request/Response model sınıfları oluşturma
-  - Error handling ve retry mekanizması
-  - Loading state yönetimi
+- **Görev:** Yeni kullanıcı verilerinin veritabanına işlenmesi
+- **Teknik İşlemler:**
+  - Şifrelerin Bcrypt ile tek yönlü hashlenmesi
+  - Benzersiz email ve username kontrolü
+  - Veritabanı (MongoDB) kayıt işlemi
 
-## 2. Kullanıcı Bilgilerini Görüntüleme Servisi
-- **API Endpoint:** `GET /users/{userId}`
-- **Görev:** Kullanıcı profil bilgilerini API'den çekip mobil uygulamada gösterme
-- **İşlevler:**
-  - JWT token ile kimlik doğrulama
-  - Kullanıcı ID'sini kullanarak profil bilgilerini getirme
-  - Gelen veriyi parse edip UI'da gösterme
-  - Token süresi dolmuşsa refresh token ile yenileme
-  - Offline durumda cache'den veri gösterme
-- **Teknik Detaylar:**
-  - Authentication header ekleme (Bearer Token)
-  - Response caching stratejisi
-  - Token refresh mekanizması
-  - Error handling (401 Unauthorized, 403 Forbidden, 404 Not Found)
+## 2. Kullanıcı Giriş (Login) Servis Entegrasyonu
+- **API Endpoint:** `POST /auth/login`
+- **Görev:** JWT tabanlı oturum açma ve yetkilendirme
+- **Teknik İşlemler:**
+  - Şifre doğrulaması
+  - 24 saat geçerli JWT (JSON Web Token) üretimi
+  - Başarılı girişte kullanıcı objesinin döndürülmesi
 
-## 3. Kullanıcı Bilgilerini Güncelleme Servisi
-- **API Endpoint:** `PUT /users/{userId}`
-- **Görev:** Kullanıcı profil bilgilerini güncelleme işlemini gerçekleştirme
-- **İşlevler:**
-  - Profil düzenleme ekranından gelen verileri toplama
-  - Form validasyonu (email formatı, telefon formatı vb.)
-  - API'ye PUT isteği gönderme
-  - Başarılı güncelleme sonrası cache'i güncelleme
-  - Optimistic UI update (kullanıcı deneyimini iyileştirme)
-- **Teknik Detaylar:**
-  - Request body oluşturma (firstName, lastName, email, phone)
-  - Partial update desteği (yalnızca değişen alanları gönderme)
-  - Conflict resolution (eşzamanlı güncelleme durumları)
-  - Error handling ve kullanıcı bildirimleri
+## 3. Yorum Beğenme (Review Like) Servis Entegrasyonu
+- **API Endpoint:** `POST /reviews/:id/like`
+- **Görev:** Sosyal etkileşim verisinin backend tarafında yönetilmesi
+- **Teknik İşlemler:**
+  - Yorumun beğeni sayısının atomik olarak artırılması
+  - İşlemin RabbitMQ bildirim kuyruğuna iletilmesi
 
-## 4. Kullanıcı Silme Servisi
-- **API Endpoint:** `DELETE /users/{userId}`
-- **Görev:** Kullanıcı hesabını silme işlemini gerçekleştirme
-- **İşlevler:**
-  - Kullanıcıya silme işlemi için onay dialog'u gösterme
-  - API'ye DELETE isteği gönderme
-  - Başarılı silme sonrası local storage ve cache'i temizleme
-  - Kullanıcıyı login ekranına yönlendirme
-  - Token'ı geçersiz kılma
-- **Teknik Detaylar:**
-  - Destructive action için confirmation dialog
-  - Local data cleanup (SharedPreferences/UserDefaults, cache, database)
-  - Logout işlemi entegrasyonu
-  - Error handling (401, 403, 404)
+## 4. Film/Dizi Arama Servis Entegrasyonu
+- **API Endpoint:** `GET /movies/search`
+- **Görev:** Arama sonuçlarının Redis desteğiyle sunulması
+- **Teknik İşlemler:**
+  - TMDB search endpoint entegrasyonu
+  - Arama sonuçlarının Redis'te 1 saatlik (TTL) önbelleğe alınması
+
+## 5. Kategori/Tür Filtreleme Servis Entegrasyonu
+- **API Endpoint:** `GET /movies/discover`
+- **Görev:** Tür bazlı veri çekme logic'i
+- **Teknik İşlemler:**
+  - Genre ID'lerine göre TMDB API filtreleme
+  - Verinin mobil için optimize edilmesi
+
+## 6. Popüler İçerik (Trending) Servis Entegrasyonu
+- **API Endpoint:** `GET /movies/trending`
+- **Görev:** Trend verilerinin sunucu tarafında çekilmesi
+- **Teknik İşlemler:**
+  - TMDB `/trending/all/day` endpoint'inin kullanılması
+  - Caching (Redis) ile sunucu yükünün azaltılması
+
+## 7. En Yüksek Puanlılar (Top Rated) Servis Entegrasyonu
+- **API Endpoint:** `GET /movies/top_rated`
+- **Görev:** En iyi puanlı içeriklerin listelenmesi
+- **Teknik İşlemler:**
+  - Puan sıralı verinin TMDB'den çekilmesi
+  - Hızlı erişim için veritabanı veya önbellek optimizasyonu
+
+## 8. Admin Kullanıcı Silme Servis Entegrasyonu
+- **API Endpoint:** `DELETE /admin/users/:id`
+- **Görev:** Yönetici yetkisiyle kullanıcı verisi silme
+- **Teknik İşlemler:**
+  - Role-based Access Control (Sadece 'admin' yetkisi kontrolü)
+  - Kullanıcının ilişkili verilerinin (liste, yorum) temizlenmesi
