@@ -117,29 +117,29 @@ const Lists = () => {
         <div className="animate-fade-in" style={{ paddingBottom: '4rem', minHeight: '80vh' }}>
             {/* Header */}
             <header className="hero" style={{
-                maxWidth: '820px',
-                margin: '1.2rem auto 2.5rem',
-                padding: '2.8rem 2rem',
+                maxWidth: '480px',
+                margin: '1rem auto 2rem',
+                padding: '1.8rem 1.4rem',
                 textAlign: 'center'
             }}>
                 <h1 style={{
-                    fontSize: '2.6rem',
+                    fontSize: '1.9rem',
                     fontWeight: 800,
                     background: 'linear-gradient(135deg, #d4af37 0%, #f39c12 100%)',
                     WebkitBackgroundClip: 'text',
                     WebkitTextFillColor: 'transparent',
-                    letterSpacing: '-1px',
-                    marginBottom: '0.6rem'
+                    letterSpacing: '-0.5px',
+                    marginBottom: '0.45rem'
                 }}>
                     Listelerim
                 </h1>
-                <p style={{ color: 'var(--text-muted)', fontSize: '1.05rem', marginBottom: '1.8rem' }}>
+                <p style={{ color: 'var(--text-muted)', fontSize: '0.95rem', marginBottom: '1.2rem', lineHeight: 1.45 }}>
                     Favori film ve dizilerinizi düzenleyin
                 </p>
                 <button
                     onClick={() => setShowForm(!showForm)}
                     className="btn-primary"
-                    style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', padding: '0.7rem 1.6rem', fontSize: '0.95rem' }}
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', padding: '0.6rem 1.4rem', fontSize: '0.88rem' }}
                 >
                     <FaPlus /> {showForm ? 'İptal' : 'Yeni Liste Oluştur'}
                 </button>
