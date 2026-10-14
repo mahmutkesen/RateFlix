@@ -288,68 +288,94 @@ exports.getFriendActivity = async (req, res) => {
         // Combine friend reviews & comments into a unified comments/feedback section sorted by date
         const comments = [...friendReviews, ...friendComments].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, 50);
 
-        // 3. Content liked by friends (Reviews, Lists, Comments)
-        const [likedReviewsRaw, likedListsRaw, likedCommentsRaw] = await Promise.all([
-            Review.find({ likes: { $in: followingIds } })
+        // 3. Content liked or disliked by friends (Reviews, Lists, Comments)
+        const reactionQuery = {
+            $or: [
+                { likes: { $in: followingIds } },
+                { dislikes: { $in: followingIds } }
+            ]
+        };
+
+        const [reactedReviewsRaw, reactedListsRaw, reactedCommentsRaw] = await Promise.all([
+            Review.find(reactionQuery)
                 .sort({ updatedAt: -1 })
-                .limit(30)
+                .limit(40)
                 .populate('user', 'username profilePic')
                 .lean(),
-            List.find({ likes: { $in: followingIds }, isPublic: true })
+            List.find({ ...reactionQuery, isPublic: true })
                 .sort({ updatedAt: -1 })
-                .limit(30)
+                .limit(40)
                 .populate('user', 'username profilePic')
                 .lean(),
-            Comment.find({ likes: { $in: followingIds } })
+            Comment.find(reactionQuery)
                 .sort({ updatedAt: -1 })
-                .limit(30)
+                .limit(40)
                 .populate('user', 'username profilePic')
                 .lean()
         ]);
 
-        const [likedReviewsCounts, likedListsCounts, attachedLikedComments] = await Promise.all([
-            getCommentCountsMap(likedReviewsRaw.map(r => r._id), 'review'),
-            getCommentCountsMap(likedListsRaw.map(l => l._id), 'list'),
-            attachCommentTargets(likedCommentsRaw, viewerId)
+        const [reactedReviewsCounts, reactedListsCounts, attachedReactedComments] = await Promise.all([
+            getCommentCountsMap(reactedReviewsRaw.map(r => r._id), 'review'),
+            getCommentCountsMap(reactedListsRaw.map(l => l._id), 'list'),
+            attachCommentTargets(reactedCommentsRaw, viewerId)
         ]);
 
-        const formatLikedBy = (likesArr) => {
-            if (!Array.isArray(likesArr)) return [];
-            return likesArr
+        const formatFriends = (arr) => {
+            if (!Array.isArray(arr)) return [];
+            return arr
                 .map(id => id.toString())
                 .filter(id => friendsMap.has(id))
                 .map(id => friendsMap.get(id));
         };
 
-        const likedReviews = likedReviewsRaw.map(r => ({
-            ...r,
-            commentCount: likedReviewsCounts[r._id.toString()] || 0,
-            activityType: 'liked_review',
-            likedByFriends: formatLikedBy(r.likes)
-        }));
+        const reactedReviews = reactedReviewsRaw.map(r => {
+            const likedByFriends = formatFriends(r.likes);
+            const dislikedByFriends = formatFriends(r.dislikes);
+            return {
+                ...r,
+                commentCount: reactedReviewsCounts[r._id.toString()] || 0,
+                activityType: 'liked_review',
+                likedByFriends,
+                dislikedByFriends,
+                reactionType: likedByFriends.length > 0 && dislikedByFriends.length > 0 ? 'both' : dislikedByFriends.length > 0 ? 'dislike' : 'like'
+            };
+        });
 
-        const likedLists = likedListsRaw.map(l => ({
-            ...l,
-            commentCount: likedListsCounts[l._id.toString()] || 0,
-            activityType: 'liked_list',
-            likedByFriends: formatLikedBy(l.likes)
-        }));
+        const reactedLists = reactedListsRaw.map(l => {
+            const likedByFriends = formatFriends(l.likes);
+            const dislikedByFriends = formatFriends(l.dislikes);
+            return {
+                ...l,
+                commentCount: reactedListsCounts[l._id.toString()] || 0,
+                activityType: 'liked_list',
+                likedByFriends,
+                dislikedByFriends,
+                reactionType: likedByFriends.length > 0 && dislikedByFriends.length > 0 ? 'both' : dislikedByFriends.length > 0 ? 'dislike' : 'like'
+            };
+        });
 
-        const likedComments = attachedLikedComments.map(c => ({
-            ...c,
-            activityType: 'liked_comment',
-            likedByFriends: formatLikedBy(c.likes)
-        }));
+        const reactedComments = attachedReactedComments.map(c => {
+            const likedByFriends = formatFriends(c.likes);
+            const dislikedByFriends = formatFriends(c.dislikes);
+            return {
+                ...c,
+                activityType: 'liked_comment',
+                likedByFriends,
+                dislikedByFriends,
+                reactionType: likedByFriends.length > 0 && dislikedByFriends.length > 0 ? 'both' : dislikedByFriends.length > 0 ? 'dislike' : 'like'
+            };
+        });
 
-        const likedContent = [...likedReviews, ...likedLists, ...likedComments]
+        const reactedContent = [...reactedReviews, ...reactedLists, ...reactedComments]
             .sort((a, b) => new Date(b.updatedAt || b.createdAt) - new Date(a.updatedAt || a.createdAt))
-            .slice(0, 50);
+            .slice(0, 60);
 
         res.json({
             followingCount: followingIds.length,
             lists,
             comments,
-            likedContent
+            likedContent: reactedContent,
+            reactedContent
         });
     } catch (err) {
         console.error('getFriendActivity error:', err);

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import api from '../services/api';
 import { getImageUrl } from '../services/tmdb';
@@ -9,7 +9,7 @@ import {
     FaUser, FaStar, FaList, FaTrash, FaClock, FaFilm, 
     FaChevronDown, FaChevronUp, FaThumbsUp, FaThumbsDown, 
     FaComment, FaPaperPlane, FaTimes, FaSearch, FaUserFriends, 
-    FaFire, FaHeart, FaSortAmountDown 
+    FaHeart, FaFire 
 } from 'react-icons/fa';
 import './Home.css';
 import './Community.css';
@@ -29,12 +29,13 @@ const Community = () => {
     // Tab and Navigation
     const [activeTab, setActiveTab] = useState('reviews'); // 'reviews' | 'lists' | 'friends'
     const [friendSubTab, setFriendSubTab] = useState('lists'); // 'lists' | 'comments' | 'liked'
+    const [friendReactionFilter, setFriendReactionFilter] = useState('all'); // 'all' | 'likes' | 'dislikes'
     const [expandedListId, setExpandedListId] = useState(null);
 
     // Search and Sort states
     const [searchQuery, setSearchQuery] = useState('');
     const [debouncedSearch, setDebouncedSearch] = useState('');
-    const [sortBy, setSortBy] = useState('newest'); // 'newest' | 'most_liked' | 'most_disliked' | 'most_commented' | 'highest_rated'
+    const [sortBy, setSortBy] = useState('newest'); // 'newest' | 'oldest' | 'most_liked' | 'most_disliked' | 'most_commented' | 'highest_rated'
 
     // Friend Activity data
     const [friendActivity, setFriendActivity] = useState({
@@ -119,18 +120,18 @@ const Community = () => {
         try {
             const res = await api.get('/users/friends/activity');
             if (res.data) {
+                const likedOrReacted = res.data.likedContent || res.data.reactedContent || [];
                 setFriendActivity({
                     followingCount: res.data.followingCount || 0,
                     lists: Array.isArray(res.data.lists) ? res.data.lists : [],
                     comments: Array.isArray(res.data.comments) ? res.data.comments : [],
-                    likedContent: Array.isArray(res.data.likedContent) ? res.data.likedContent : []
+                    likedContent: Array.isArray(likedOrReacted) ? likedOrReacted : []
                 });
 
-                // Merge reactions for friend items
                 const allItems = [
                     ...(res.data.lists || []),
                     ...(res.data.comments || []),
-                    ...(res.data.likedContent || [])
+                    ...(likedOrReacted || [])
                 ];
                 setReactions(prev => ({ ...prev, ...initReactions(allItems) }));
             }
@@ -270,7 +271,6 @@ const Community = () => {
         }
     };
 
-    // Helper for Like/Dislike action on reviews and lists
     const handleReactionClick = async (e, id, type, kind) => {
         e.preventDefault();
         e.stopPropagation();
@@ -339,7 +339,6 @@ const Community = () => {
 
                 {isExpanded && (
                     <div className="comment-drawer animate-fade-in">
-                        {/* Add Comment Input */}
                         {myUser && (
                             <form onSubmit={(e) => handleCommentSubmit(e, targetId, targetType)} className="comment-form">
                                 <input
@@ -355,7 +354,6 @@ const Community = () => {
                             </form>
                         )}
 
-                        {/* Comment List */}
                         <div className="comment-list">
                             {isLoading ? (
                                 <div className="small-spinner-container"><div className="small-spinner"></div></div>
@@ -417,14 +415,151 @@ const Community = () => {
         );
     };
 
+    // Helper: Client-side sorting for Friend Activity
+    const sortFriendItems = (items) => {
+        if (!Array.isArray(items)) return [];
+        const arr = [...items];
+        switch (sortBy) {
+            case 'oldest':
+                return arr.sort((a, b) => new Date(a.createdAt || a.updatedAt) - new Date(b.createdAt || b.updatedAt));
+            case 'most_liked':
+                return arr.sort((a, b) => (b.likes?.length || b.likeCount || 0) - (a.likes?.length || a.likeCount || 0));
+            case 'most_disliked':
+                return arr.sort((a, b) => (b.dislikes?.length || b.dislikeCount || 0) - (a.dislikes?.length || a.dislikeCount || 0));
+            case 'most_commented':
+                return arr.sort((a, b) => (b.commentCount || 0) - (a.commentCount || 0));
+            case 'highest_rated':
+                return arr.sort((a, b) => (b.rating || 0) - (a.rating || 0));
+            case 'newest':
+            default:
+                return arr.sort((a, b) => new Date(b.createdAt || b.updatedAt) - new Date(a.createdAt || a.updatedAt));
+        }
+    };
+
     // Client-side text filter helper for friend activity sub-tabs
     const filterFriendItem = (item) => {
         if (!debouncedSearch) return true;
         const q = debouncedSearch.toLowerCase();
         const username = item.user?.username?.toLowerCase() || '';
-        const title = (item.movieTitle || item.name || item.targetInfo?.title || '').toLowerCase();
+        const title = (item.movieTitle || item.name || item.targetInfo?.title || item.target?.title || '').toLowerCase();
         const text = (item.reviewText || item.description || item.content || '').toLowerCase();
-        return username.includes(q) || title.includes(q) || text.includes(q);
+        // Also search in list item titles!
+        const itemsText = (item.items || []).map(i => i.title || '').join(' ').toLowerCase();
+        return username.includes(q) || title.includes(q) || text.includes(q) || itemsText.includes(q);
+    };
+
+    // Helper: Render Interactive Friend Liked/Disliked Banner
+    const renderFriendReactionBanner = (item) => {
+        const likedBy = item.likedByFriends || [];
+        const dislikedBy = item.dislikedByFriends || [];
+        const isDislike = item.reactionType === 'dislike';
+        const isBoth = item.reactionType === 'both';
+
+        return (
+            <div className={`friend-liked-banner ${isDislike ? 'dislike-banner' : isBoth ? 'both-banner' : ''}`}>
+                {isDislike ? (
+                    <FaThumbsDown size={14} style={{ color: '#ff7675' }} />
+                ) : (
+                    <FaHeart size={14} style={{ color: '#ff7675' }} />
+                )}
+
+                {/* Friend Avatar Stack */}
+                <div className="friend-avatar-stack">
+                    {[...likedBy, ...dislikedBy].slice(0, 3).map((f, i) => (
+                        <Link key={i} to={`/profile/${f.username}`} title={f.username} onClick={e => e.stopPropagation()}>
+                            {f.profilePic ? (
+                                <img src={f.profilePic} alt={f.username} />
+                            ) : (
+                                <div className="avatar-fallback" style={{ background: 'var(--primary-color)', color: '#000', fontSize: '0.65rem', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}>
+                                    {f.username?.[0]?.toUpperCase() || 'U'}
+                                </div>
+                            )}
+                        </Link>
+                    ))}
+                </div>
+
+                {/* Clickable Friend Names */}
+                <div style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {likedBy.length > 0 && (
+                        <span>
+                            {likedBy.map((f, idx) => (
+                                <React.Fragment key={f._id || idx}>
+                                    <Link to={`/profile/${f.username}`} className="friend-name-link" onClick={e => e.stopPropagation()}>
+                                        {f.username}
+                                    </Link>
+                                    {idx < likedBy.length - 1 ? ', ' : ''}
+                                </React.Fragment>
+                            ))}
+                            {' bunu beğendi'}
+                        </span>
+                    )}
+                    {isBoth && ' • '}
+                    {dislikedBy.length > 0 && (
+                        <span>
+                            {dislikedBy.map((f, idx) => (
+                                <React.Fragment key={f._id || idx}>
+                                    <Link to={`/profile/${f.username}`} className="friend-name-link" onClick={e => e.stopPropagation()}>
+                                        {f.username}
+                                    </Link>
+                                    {idx < dislikedBy.length - 1 ? ', ' : ''}
+                                </React.Fragment>
+                            ))}
+                            {' buna dislike attı'}
+                        </span>
+                    )}
+                </div>
+            </div>
+        );
+    };
+
+    // Helper: Render Target Reference Box for a Comment
+    const renderCommentTargetBox = (comment) => {
+        const target = comment.target || comment.targetInfo;
+        if (!target) {
+            return (
+                <div className="target-reference-card" style={{ opacity: 0.8 }}>
+                    <div className="target-reference-thumb">
+                        <FaFilm size={14} color="var(--primary-color)" />
+                    </div>
+                    <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: '0.72rem', color: 'var(--primary-color)', fontWeight: 600 }}>Topluluk İçeriği</div>
+                        <div style={{ fontSize: '0.85rem', color: '#ccc' }}>Film / Liste İncelemesine Yorum</div>
+                    </div>
+                </div>
+            );
+        }
+
+        const isReview = target.type === 'review';
+        const title = target.movieTitle || target.title || target.name || (isReview ? 'Film İncelemesi' : 'Liste');
+        const link = target.link || (isReview && target.tmdbId ? `/${target.mediaType || 'movie'}/${target.tmdbId}` : '/community');
+
+        return (
+            <Link to={link} className="target-reference-card">
+                {target.posterPath ? (
+                    <img src={getImageUrl(target.posterPath, 'w92')} alt={title} className="target-reference-thumb" />
+                ) : (
+                    <div className="target-reference-thumb">
+                        {isReview ? <FaFilm size={14} color="var(--primary-color)" /> : <FaList size={14} color="var(--primary-color)" />}
+                    </div>
+                )}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: '0.72rem', color: 'var(--primary-color)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        {isReview ? '🎬 Film İncelemesine Yorum' : '📋 Listeye Yorum'}
+                        {target.reviewAuthor && (
+                            <span style={{ color: 'var(--text-muted)' }}>• @{target.reviewAuthor}</span>
+                        )}
+                    </div>
+                    <div style={{ fontSize: '0.9rem', fontWeight: 700, color: '#fff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {title}
+                    </div>
+                    {target.reviewText && (
+                        <div style={{ fontSize: '0.78rem', color: '#aaa', fontStyle: 'italic', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginTop: '2px' }}>
+                            "{target.reviewText}"
+                        </div>
+                    )}
+                </div>
+            </Link>
+        );
     };
 
     return (
@@ -485,7 +620,7 @@ const Community = () => {
 
             <header className="hero" style={{ width: '100%', margin: '1rem auto 2.2rem', padding: '1.8rem 2rem' }}>
                 <h1>Topluluk Merkezi</h1>
-                <p>RateFlix topluluğunun paylaştığı en popüler incelemeleri, listeleri ve arkadaşlarınızın aktivitelerini keşfedin.</p>
+                <p>RateFlix üyelerinin paylaştığı en popüler incelemeleri, listeleri ve arkadaşlarınızın aktivitelerini keşfedin.</p>
             </header>
 
             {/* 3 Main Tabs: Son İncelemeler | Herkese Açık Listeler | Arkadaş Aktivitesi */}
@@ -542,14 +677,14 @@ const Community = () => {
 
             <div style={{ maxWidth: '840px', margin: '0 auto' }}>
 
-                {/* Search & Sort Controls Bar */}
+                {/* Search & Sort Controls Bar (Visible on ALL tabs including Friend Activity) */}
                 <div className="community-controls-bar">
                     {/* Live Debounced Search Bar */}
                     <div className="community-search-box">
                         <FaSearch className="search-icon" />
                         <input
                             type="text"
-                            placeholder={activeTab === 'lists' ? "Liste adı, açıklama veya kullanıcı ara..." : activeTab === 'friends' ? "Arkadaş, film veya yorumlarda ara..." : "Film, dizi, inceleme veya kullanıcı ara..."}
+                            placeholder={activeTab === 'lists' ? "Liste adı, film adı veya kullanıcı ara..." : activeTab === 'friends' ? "Arkadaş, film, liste veya yorum ara..." : "Film, dizi, inceleme veya kullanıcı ara..."}
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                         />
@@ -560,43 +695,47 @@ const Community = () => {
                         )}
                     </div>
 
-                    {/* Sorting Options (Available for Reviews & Lists) */}
-                    {activeTab !== 'friends' && (
-                        <div className="community-sort-group">
+                    {/* Sorting Options with "En Eski" option */}
+                    <div className="community-sort-group">
+                        <button
+                            className={`sort-pill-btn ${sortBy === 'newest' ? 'active' : ''}`}
+                            onClick={() => setSortBy('newest')}
+                        >
+                            <FaClock size={11} /> En Yeni
+                        </button>
+                        <button
+                            className={`sort-pill-btn ${sortBy === 'oldest' ? 'active' : ''}`}
+                            onClick={() => setSortBy('oldest')}
+                        >
+                            <FaClock size={11} /> En Eski
+                        </button>
+                        <button
+                            className={`sort-pill-btn ${sortBy === 'most_liked' ? 'active' : ''}`}
+                            onClick={() => setSortBy('most_liked')}
+                        >
+                            <FaThumbsUp size={11} /> En Çok Beğenilen
+                        </button>
+                        <button
+                            className={`sort-pill-btn ${sortBy === 'most_disliked' ? 'active' : ''}`}
+                            onClick={() => setSortBy('most_disliked')}
+                        >
+                            <FaThumbsDown size={11} /> En Çok Dislike
+                        </button>
+                        <button
+                            className={`sort-pill-btn ${sortBy === 'most_commented' ? 'active' : ''}`}
+                            onClick={() => setSortBy('most_commented')}
+                        >
+                            <FaComment size={11} /> En Çok Yorum
+                        </button>
+                        {activeTab === 'reviews' && (
                             <button
-                                className={`sort-pill-btn ${sortBy === 'newest' ? 'active' : ''}`}
-                                onClick={() => setSortBy('newest')}
+                                className={`sort-pill-btn ${sortBy === 'highest_rated' ? 'active' : ''}`}
+                                onClick={() => setSortBy('highest_rated')}
                             >
-                                <FaClock size={11} /> En Yeni
+                                <FaStar size={11} /> En Yüksek Puan
                             </button>
-                            <button
-                                className={`sort-pill-btn ${sortBy === 'most_liked' ? 'active' : ''}`}
-                                onClick={() => setSortBy('most_liked')}
-                            >
-                                <FaThumbsUp size={11} /> En Çok Beğenilen
-                            </button>
-                            <button
-                                className={`sort-pill-btn ${sortBy === 'most_disliked' ? 'active' : ''}`}
-                                onClick={() => setSortBy('most_disliked')}
-                            >
-                                <FaThumbsDown size={11} /> En Çok Dislike
-                            </button>
-                            <button
-                                className={`sort-pill-btn ${sortBy === 'most_commented' ? 'active' : ''}`}
-                                onClick={() => setSortBy('most_commented')}
-                            >
-                                <FaComment size={11} /> En Çok Yorum
-                            </button>
-                            {activeTab === 'reviews' && (
-                                <button
-                                    className={`sort-pill-btn ${sortBy === 'highest_rated' ? 'active' : ''}`}
-                                    onClick={() => setSortBy('highest_rated')}
-                                >
-                                    <FaStar size={11} /> En Yüksek Puan
-                                </button>
-                            )}
-                        </div>
-                    )}
+                        )}
+                    </div>
                 </div>
 
                 {/* Loading State */}
@@ -640,12 +779,12 @@ const Community = () => {
                                             <div style={{ flex: 1 }}>
                                                 <div className="review-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.5rem' }}>
                                                     <div>
-                                                        <Link to={review.user ? `/profile/${review.user.username || review.user._id || review.user}` : '#'} style={{ textDecoration: 'none' }}>
+                                                        <Link to={review.user?.username ? `/profile/${review.user.username}` : '#'} style={{ textDecoration: 'none' }}>
                                                             <div style={{ fontWeight: 700, fontSize: '1rem', color: '#fff', marginBottom: '0.3rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                                                                 <div style={{ background: 'linear-gradient(135deg, var(--primary-color), #f39c12)', width: '24px', height: '24px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#000', fontSize: '0.7rem', overflow: 'hidden' }}>
                                                                     {review.user?.profilePic ? <img src={review.user.profilePic} alt="" style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} /> : <FaUser />}
                                                                 </div>
-                                                                {review.user?.username || (typeof review.user === 'string' ? `User-${review.user.substring(0, 5)}` : 'Kullanıcı')}
+                                                                {review.user?.username || 'Kullanıcı'}
                                                             </div>
                                                         </Link>
                                                         <Link to={`/${review.mediaType || 'movie'}/${review.tmdbId}`} style={{ textDecoration: 'none', color: 'var(--text-muted)', fontSize: '0.9rem', fontWeight: 600 }}>
@@ -662,14 +801,12 @@ const Community = () => {
                                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '1rem', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
                                                     <span><FaClock style={{ marginRight: '0.3rem' }} /> {new Date(review.createdAt).toLocaleDateString('tr-TR')}</span>
                                                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                                        {/* Like Button */}
                                                         <button
                                                             onClick={(e) => handleReactionClick(e, review._id, 'like', 'review')}
                                                             style={{ background: reactions[review._id]?.liked ? 'rgba(46, 213, 115, 0.2)' : 'rgba(255,255,255,0.05)', border: `1px solid ${reactions[review._id]?.liked ? '#2ed573' : 'rgba(255,255,255,0.1)'}`, color: reactions[review._id]?.liked ? '#2ed573' : 'var(--text-muted)', borderRadius: '20px', padding: '4px 10px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', transition: 'all 0.2s', fontSize: '0.8rem' }}
                                                         >
                                                             <FaThumbsUp size={11} /> {reactions[review._id]?.likes || 0}
                                                         </button>
-                                                        {/* Dislike Button */}
                                                         <button
                                                             onClick={(e) => handleReactionClick(e, review._id, 'dislike', 'review')}
                                                             style={{ background: reactions[review._id]?.disliked ? 'rgba(255, 118, 117, 0.2)' : 'rgba(255,255,255,0.05)', border: `1px solid ${reactions[review._id]?.disliked ? '#ff7675' : 'rgba(255,255,255,0.1)'}`, color: reactions[review._id]?.disliked ? '#ff7675' : 'var(--text-muted)', borderRadius: '20px', padding: '4px 10px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', transition: 'all 0.2s', fontSize: '0.8rem' }}
@@ -683,11 +820,11 @@ const Community = () => {
                                                                     onClick={() => setEditingReview({ 
                                                                         id: review._id, 
                                                                         tmdbId: review.tmdbId, 
-                                                                        mediaType: review.mediaType,
+                                                                        mediaType: review.mediaType, 
                                                                         rating: review.rating, 
-                                                                        reviewText: review.reviewText,
-                                                                        movieTitle: review.movieTitle,
-                                                                        posterPath: review.posterPath
+                                                                        reviewText: review.reviewText, 
+                                                                        movieTitle: review.movieTitle, 
+                                                                        posterPath: review.posterPath 
                                                                     })} 
                                                                     style={{ background: 'none', border: 'none', color: 'var(--primary-color)', cursor: 'pointer', fontSize: '0.9rem' }} 
                                                                     title="Düzenle"
@@ -702,7 +839,6 @@ const Community = () => {
                                                     </div>
                                                 </div>
 
-                                                {/* Comment Section */}
                                                 <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)', marginTop: '1rem', paddingTop: '0.5rem' }}>
                                                     {renderComments(review._id, 'review', review.commentCount || 0)}
                                                 </div>
@@ -733,7 +869,7 @@ const Community = () => {
                                             onClick={() => toggleList(list._id)}
                                         >
                                             <div style={{ flex: 1, paddingRight: '1rem' }}>
-                                                <Link to={list.user ? `/profile/${list.user.username || list.user._id || list.user}` : '#'} onClick={(e) => e.stopPropagation()} style={{ textDecoration: 'none' }}>
+                                                <Link to={list.user?.username ? `/profile/${list.user.username}` : '#'} onClick={(e) => e.stopPropagation()} style={{ textDecoration: 'none' }}>
                                                     <div style={{
                                                         background: `${listItemColors[idx % listItemColors.length]}22`,
                                                         border: `1px solid ${listItemColors[idx % listItemColors.length]}44`,
@@ -745,7 +881,7 @@ const Community = () => {
                                                         color: listItemColors[idx % listItemColors.length]
                                                     }}>
                                                         {list.user?.profilePic ? <img src={list.user.profilePic} alt="" style={{ width: '16px', height: '16px', borderRadius: '50%', objectFit: 'cover' }} /> : <FaUser style={{ fontSize: '0.7rem' }} />}
-                                                        {list.user?.username || (typeof list.user === 'string' ? `User-${list.user.substring(0, 5)}` : 'Kullanıcı')}
+                                                        {list.user?.username || 'Kullanıcı'}
                                                     </div>
                                                 </Link>
                                                 <h3 style={{ fontSize: '1.3rem', marginBottom: '0.3rem', color: '#fff' }}>{list.name}</h3>
@@ -762,30 +898,34 @@ const Community = () => {
                                                     </button>
                                                 )}
 
-                                                {/* Unexpanded Preview Row */}
+                                                {/* Single-Row Preview with Smooth Horizontal Overflow */}
                                                 {expandedListId !== list._id && list.items?.length > 0 && (
-                                                    <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem', overflow: 'hidden' }}>
-                                                        {list.items.slice(0, 6).map((item, i) => (
-                                                            <div key={i} style={{ flexShrink: 0 }}>
-                                                                {item.posterPath ? (
-                                                                    <img src={getImageUrl(item.posterPath, 'w92')} alt={item.title} style={{ width: '40px', height: '60px', objectFit: 'cover', borderRadius: '4px', border: '1px solid rgba(255,255,255,0.1)' }} />
-                                                                ) : (
-                                                                    <div style={{ width: '40px', height: '60px', background: 'rgba(255,255,255,0.1)', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                                                        <FaFilm size={12} color="var(--text-muted)" />
-                                                                    </div>
-                                                                )}
-                                                            </div>
-                                                        ))}
-                                                        {list.items.length > 6 && (
-                                                            <div style={{ width: '40px', height: '60px', background: 'rgba(255,255,255,0.1)', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8rem', fontWeight: 'bold', border: '1px solid rgba(255,255,255,0.1)' }}>
-                                                                +{list.items.length - 6}
-                                                            </div>
-                                                        )}
+                                                    <div>
+                                                        <div className="list-preview-scroll-row">
+                                                            {list.items.slice(0, 8).map((item, i) => (
+                                                                <div key={i} style={{ flexShrink: 0 }}>
+                                                                    {item.posterPath ? (
+                                                                        <img src={getImageUrl(item.posterPath, 'w92')} alt={item.title} style={{ width: '42px', height: '62px', objectFit: 'cover', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.1)' }} />
+                                                                    ) : (
+                                                                        <div style={{ width: '42px', height: '62px', background: 'rgba(255,255,255,0.08)', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                                            <FaFilm size={12} color="var(--text-muted)" />
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            ))}
+                                                            {list.items.length > 8 && (
+                                                                <div style={{ width: '42px', height: '62px', background: 'rgba(255,255,255,0.08)', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8rem', fontWeight: 'bold', color: 'var(--primary-color)', flexShrink: 0, border: '1px solid rgba(212, 175, 55, 0.3)' }}>
+                                                                    +{list.items.length - 8}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                        <button className="list-expand-btn" onClick={(e) => { e.stopPropagation(); toggleList(list._id); }}>
+                                                            <FaChevronDown size={10} /> Tüm Filmleri Gör ({list.items.length})
+                                                        </button>
                                                     </div>
                                                 )}
                                             </div>
 
-                                            {/* Action buttons & toggle icon */}
                                             <div style={{ color: 'var(--text-muted)', fontSize: '1.2rem', padding: '0.5rem', display: 'flex', alignItems: 'center', flexDirection: 'column', gap: '0.5rem' }}>
                                                 {expandedListId === list._id ? <FaChevronUp /> : <FaChevronDown />}
                                                 
@@ -806,21 +946,21 @@ const Community = () => {
                                             </div>
                                         </div>
 
-                                        {/* Expanded Content View */}
+                                        {/* Expanded Content View (Grid) */}
                                         {expandedListId === list._id && (
                                             <>
-                                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))', gap: '1rem', marginTop: '1.5rem', paddingTop: '1.5rem', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+                                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(95px, 1fr))', gap: '0.8rem', marginTop: '1.2rem', paddingTop: '1.2rem', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
                                                     {list.items?.length > 0 ? (
                                                         list.items.map(item => (
                                                             <Link to={`/${item.mediaType || 'movie'}/${item.tmdbId}`} key={item.tmdbId} style={{ textDecoration: 'none', color: '#fff', textAlign: 'center' }} className="hover-scale">
                                                                 {item.posterPath ? (
-                                                                    <img src={getImageUrl(item.posterPath, 'w200')} alt={item.title} style={{ width: '100%', borderRadius: '8px', marginBottom: '0.5rem' }} />
+                                                                    <img src={getImageUrl(item.posterPath, 'w200')} alt={item.title} style={{ width: '100%', borderRadius: '8px', marginBottom: '0.4rem' }} />
                                                                 ) : (
-                                                                    <div style={{ width: '100%', aspectRatio: '2/3', background: 'rgba(255,255,255,0.1)', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '0.5rem' }}>
+                                                                    <div style={{ width: '100%', aspectRatio: '2/3', background: 'rgba(255,255,255,0.1)', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '0.4rem' }}>
                                                                         <FaFilm />
                                                                     </div>
                                                                 )}
-                                                                <div style={{ fontSize: '0.8rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.title}</div>
+                                                                <div style={{ fontSize: '0.78rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.title}</div>
                                                             </Link>
                                                         ))
                                                     ) : (
@@ -829,7 +969,9 @@ const Community = () => {
                                                         </div>
                                                     )}
                                                 </div>
-                                                {/* Comment Section for List */}
+                                                <button className="list-expand-btn" style={{ marginTop: '1rem' }} onClick={() => toggleList(list._id)}>
+                                                    <FaChevronUp size={10} /> Listeyi Kapat
+                                                </button>
                                                 <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)', marginTop: '1rem', paddingTop: '0.5rem' }}>
                                                     {renderComments(list._id, 'list', list.commentCount || 0)}
                                                 </div>
@@ -843,7 +985,7 @@ const Community = () => {
                 )}
 
                 {/* =========================================================================
-                   TAB 3: ARKADAŞ AKTİVİTESİ (3 Sub-Sections: Paylaşılan Listeler | Yorumlar | Beğendiği İçerikler)
+                   TAB 3: ARKADAŞ AKTİVİTESİ
                    ========================================================================= */}
                 {!loading && activeTab === 'friends' && (
                     <section className="animate-fade-in">
@@ -876,7 +1018,7 @@ const Community = () => {
                             </div>
                         ) : (
                             <div>
-                                {/* Sub-Tabs Bar: Paylaşılan Listeler | Yorumlar | Beğendiği İçerikler */}
+                                {/* Sub-Tabs Bar: Paylaşılan Listeler | Yorumlar | Beğendiği/Beğenmediği İçerikler */}
                                 <div className="friend-subtabs-bar">
                                     <button
                                         className={`friend-subtab-btn ${friendSubTab === 'lists' ? 'active' : ''}`}
@@ -894,26 +1036,30 @@ const Community = () => {
                                         className={`friend-subtab-btn ${friendSubTab === 'liked' ? 'active' : ''}`}
                                         onClick={() => setFriendSubTab('liked')}
                                     >
-                                        <FaHeart size={13} /> Beğendiği İçerikler ({friendActivity.likedContent.length})
+                                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                                            <FaThumbsUp size={11} style={{ color: '#2ed573' }} />
+                                            <FaThumbsDown size={11} style={{ color: '#ff7675' }} />
+                                        </span>
+                                        Beğendiği & Dislike Attığı ({friendActivity.likedContent.length})
                                     </button>
                                 </div>
 
                                 {/* 1. Sub-section: Paylaşılan Listeler */}
                                 {friendSubTab === 'lists' && (
                                     <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                                        {friendActivity.lists.filter(filterFriendItem).length === 0 ? (
+                                        {sortFriendItems(friendActivity.lists).filter(filterFriendItem).length === 0 ? (
                                             <div className="glass-panel" style={{ padding: '2.5rem', textAlign: 'center', color: 'var(--text-muted)' }}>
-                                                Arkadaşlarınızın paylaştığı herkese açık liste bulunmuyor.
+                                                Arkadaşlarınızın paylaştığı liste bulunmuyor.
                                             </div>
                                         ) : (
-                                            friendActivity.lists.filter(filterFriendItem).map((list, idx) => (
+                                            sortFriendItems(friendActivity.lists).filter(filterFriendItem).map((list, idx) => (
                                                 <div key={list._id} className="glass-panel" style={{ padding: '1.5rem', borderRadius: '12px', transition: 'all 0.3s', backgroundColor: expandedListId === list._id ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.03)' }}>
                                                     <div
                                                         style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', cursor: 'pointer' }}
                                                         onClick={() => toggleList(list._id)}
                                                     >
                                                         <div style={{ flex: 1, paddingRight: '1rem' }}>
-                                                            <Link to={list.user ? `/profile/${list.user.username || list.user._id || list.user}` : '#'} onClick={(e) => e.stopPropagation()} style={{ textDecoration: 'none' }}>
+                                                            <Link to={list.user?.username ? `/profile/${list.user.username}` : '#'} onClick={(e) => e.stopPropagation()} style={{ textDecoration: 'none' }}>
                                                                 <div style={{
                                                                     background: `${listItemColors[idx % listItemColors.length]}22`,
                                                                     border: `1px solid ${listItemColors[idx % listItemColors.length]}44`,
@@ -934,25 +1080,30 @@ const Community = () => {
                                                                 <p style={{ color: '#aaa', fontSize: '0.85rem', marginTop: '0.4rem', fontStyle: 'italic' }}>{list.description}</p>
                                                             )}
 
-                                                            {/* Unexpanded Preview Row */}
+                                                            {/* Unexpanded Preview Row: Horizontal scroll */}
                                                             {expandedListId !== list._id && list.items?.length > 0 && (
-                                                                <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem', overflow: 'hidden' }}>
-                                                                    {list.items.slice(0, 6).map((item, i) => (
-                                                                        <div key={i} style={{ flexShrink: 0 }}>
-                                                                            {item.posterPath ? (
-                                                                                <img src={getImageUrl(item.posterPath, 'w92')} alt={item.title} style={{ width: '40px', height: '60px', objectFit: 'cover', borderRadius: '4px', border: '1px solid rgba(255,255,255,0.1)' }} />
-                                                                            ) : (
-                                                                                <div style={{ width: '40px', height: '60px', background: 'rgba(255,255,255,0.1)', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                                                                <FaFilm size={12} color="var(--text-muted)" />
+                                                                <div>
+                                                                    <div className="list-preview-scroll-row">
+                                                                        {list.items.slice(0, 8).map((item, i) => (
+                                                                            <div key={i} style={{ flexShrink: 0 }}>
+                                                                                {item.posterPath ? (
+                                                                                    <img src={getImageUrl(item.posterPath, 'w92')} alt={item.title} style={{ width: '42px', height: '62px', objectFit: 'cover', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.1)' }} />
+                                                                                ) : (
+                                                                                    <div style={{ width: '42px', height: '62px', background: 'rgba(255,255,255,0.08)', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                                                        <FaFilm size={12} color="var(--text-muted)" />
+                                                                                    </div>
+                                                                                )}
                                                                             </div>
-                                                                            )}
-                                                                        </div>
-                                                                    ))}
-                                                                    {list.items.length > 6 && (
-                                                                        <div style={{ width: '40px', height: '60px', background: 'rgba(255,255,255,0.1)', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8rem', fontWeight: 'bold', border: '1px solid rgba(255,255,255,0.1)' }}>
-                                                                            +{list.items.length - 6}
-                                                                        </div>
-                                                                    )}
+                                                                        ))}
+                                                                        {list.items.length > 8 && (
+                                                                            <div style={{ width: '42px', height: '62px', background: 'rgba(255,255,255,0.08)', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8rem', fontWeight: 'bold', color: 'var(--primary-color)', flexShrink: 0, border: '1px solid rgba(212, 175, 55, 0.3)' }}>
+                                                                                +{list.items.length - 8}
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+                                                                    <button className="list-expand-btn" onClick={(e) => { e.stopPropagation(); toggleList(list._id); }}>
+                                                                        <FaChevronDown size={10} /> Tüm Filmleri Gör ({list.items.length})
+                                                                    </button>
                                                                 </div>
                                                             )}
                                                         </div>
@@ -978,21 +1129,21 @@ const Community = () => {
                                                         </div>
                                                     </div>
 
-                                                    {/* Expanded Items */}
+                                                    {/* Expanded Items (Grid) */}
                                                     {expandedListId === list._id && (
                                                         <>
-                                                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))', gap: '1rem', marginTop: '1.5rem', paddingTop: '1.5rem', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+                                                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(95px, 1fr))', gap: '0.8rem', marginTop: '1.2rem', paddingTop: '1.2rem', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
                                                                 {list.items?.length > 0 ? (
                                                                     list.items.map(item => (
                                                                         <Link to={`/${item.mediaType || 'movie'}/${item.tmdbId}`} key={item.tmdbId} style={{ textDecoration: 'none', color: '#fff', textAlign: 'center' }} className="hover-scale">
                                                                             {item.posterPath ? (
-                                                                                <img src={getImageUrl(item.posterPath, 'w200')} alt={item.title} style={{ width: '100%', borderRadius: '8px', marginBottom: '0.5rem' }} />
+                                                                                <img src={getImageUrl(item.posterPath, 'w200')} alt={item.title} style={{ width: '100%', borderRadius: '8px', marginBottom: '0.4rem' }} />
                                                                             ) : (
-                                                                                <div style={{ width: '100%', aspectRatio: '2/3', background: 'rgba(255,255,255,0.1)', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '0.5rem' }}>
+                                                                                <div style={{ width: '100%', aspectRatio: '2/3', background: 'rgba(255,255,255,0.1)', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '0.4rem' }}>
                                                                                     <FaFilm />
                                                                                 </div>
                                                                             )}
-                                                                            <div style={{ fontSize: '0.8rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.title}</div>
+                                                                            <div style={{ fontSize: '0.78rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.title}</div>
                                                                         </Link>
                                                                     ))
                                                                 ) : (
@@ -1001,6 +1152,9 @@ const Community = () => {
                                                                     </div>
                                                                 )}
                                                             </div>
+                                                            <button className="list-expand-btn" style={{ marginTop: '1rem' }} onClick={() => toggleList(list._id)}>
+                                                                <FaChevronUp size={10} /> Listeyi Kapat
+                                                            </button>
                                                             <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)', marginTop: '1rem', paddingTop: '0.5rem' }}>
                                                                 {renderComments(list._id, 'list', list.commentCount || 0)}
                                                             </div>
@@ -1015,12 +1169,12 @@ const Community = () => {
                                 {/* 2. Sub-section: Yorumlar ve İncelemeler */}
                                 {friendSubTab === 'comments' && (
                                     <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                                        {friendActivity.comments.filter(filterFriendItem).length === 0 ? (
+                                        {sortFriendItems(friendActivity.comments).filter(filterFriendItem).length === 0 ? (
                                             <div className="glass-panel" style={{ padding: '2.5rem', textAlign: 'center', color: 'var(--text-muted)' }}>
                                                 Arkadaşlarınızın paylaştığı inceleme veya yorum bulunmuyor.
                                             </div>
                                         ) : (
-                                            friendActivity.comments.filter(filterFriendItem).map(item => {
+                                            sortFriendItems(friendActivity.comments).filter(filterFriendItem).map(item => {
                                                 const isReview = item.activityType === 'review' || item.rating !== undefined;
                                                 if (isReview) {
                                                     return (
@@ -1038,7 +1192,7 @@ const Community = () => {
                                                                 <div style={{ flex: 1 }}>
                                                                     <div className="review-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.5rem' }}>
                                                                         <div>
-                                                                            <Link to={item.user ? `/profile/${item.user.username || item.user._id || item.user}` : '#'} style={{ textDecoration: 'none' }}>
+                                                                            <Link to={item.user?.username ? `/profile/${item.user.username}` : '#'} style={{ textDecoration: 'none' }}>
                                                                                 <div style={{ fontWeight: 700, fontSize: '1rem', color: '#fff', marginBottom: '0.3rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                                                                                     <div style={{ background: 'linear-gradient(135deg, var(--primary-color), #f39c12)', width: '24px', height: '24px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#000', fontSize: '0.7rem', overflow: 'hidden' }}>
                                                                                         {item.user?.profilePic ? <img src={item.user.profilePic} alt="" style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} /> : <FaUser />}
@@ -1070,16 +1224,17 @@ const Community = () => {
                                                                         {renderComments(item._id, 'review', item.commentCount || 0)}
                                                                     </div>
                                                                 </div>
+                             
                                                             </div>
                                                         </div>
                                                     );
                                                 }
 
-                                                // Regular Comment item
+                                                // Regular Comment item with Target Information
                                                 return (
                                                     <div key={item._id} className="glass-panel" style={{ padding: '1.4rem' }}>
                                                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.8rem' }}>
-                                                            <Link to={item.user ? `/profile/${item.user.username || item.user._id || item.user}` : '#'} style={{ textDecoration: 'none' }}>
+                                                            <Link to={item.user?.username ? `/profile/${item.user.username}` : '#'} style={{ textDecoration: 'none' }}>
                                                                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 700, color: '#fff', fontSize: '0.95rem' }}>
                                                                     <div style={{ width: '26px', height: '26px', borderRadius: '50%', background: 'var(--primary-gradient)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#000', fontSize: '0.75rem', overflow: 'hidden' }}>
                                                                         {item.user?.profilePic ? <img src={item.user.profilePic} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <FaUser />}
@@ -1092,26 +1247,8 @@ const Community = () => {
                                                             </span>
                                                         </div>
 
-                                                        {/* Target reference card */}
-                                                        {item.targetInfo && (
-                                                            <Link to={item.targetInfo.link || '#'} className="target-reference-card">
-                                                                {item.targetInfo.posterPath ? (
-                                                                    <img src={getImageUrl(item.targetInfo.posterPath, 'w92')} alt="" className="target-reference-thumb" />
-                                                                ) : (
-                                                                    <div className="target-reference-thumb">
-                                                                        {item.targetType === 'review' ? <FaFilm size={14} color="var(--primary-color)" /> : <FaList size={14} color="var(--primary-color)" />}
-                                                                    </div>
-                                                                )}
-                                                                <div style={{ flex: 1, minWidth: 0 }}>
-                                                                    <div style={{ fontSize: '0.75rem', color: 'var(--primary-color)', fontWeight: 600 }}>
-                                                                        {item.targetType === 'review' ? 'Film İncelemesine Yorum' : 'Listeye Yorum'}
-                                                                    </div>
-                                                                    <div style={{ fontSize: '0.88rem', fontWeight: 700, color: '#fff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                                                        {item.targetInfo.title || 'İçerik Detayı'}
-                                                                    </div>
-                                                                </div>
-                                                            </Link>
-                                                        )}
+                                                        {/* Target reference card: Always rendered and shows what movie/list was commented on */}
+                                                        {renderCommentTargetBox(item)}
 
                                                         <p style={{ color: '#eee', fontSize: '0.95rem', margin: '0.6rem 0 1rem', lineHeight: 1.5 }}>
                                                             {item.content}
@@ -1138,40 +1275,55 @@ const Community = () => {
                                     </div>
                                 )}
 
-                                {/* 3. Sub-section: Beğendiği İçerikler */}
+                                {/* 3. Sub-section: Beğendiği & Beğenmediği İçerikler */}
                                 {friendSubTab === 'liked' && (
                                     <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                                        {friendActivity.likedContent.filter(filterFriendItem).length === 0 ? (
+                                        {/* Sub-filter pills for Likes vs Dislikes */}
+                                        <div className="filter-pills-bar" style={{ marginBottom: '0.5rem' }}>
+                                            <button
+                                                className={`filter-pill-btn ${friendReactionFilter === 'all' ? 'active' : ''}`}
+                                                onClick={() => setFriendReactionFilter('all')}
+                                            >
+                                                Tümü ({friendActivity.likedContent.length})
+                                            </button>
+                                            <button
+                                                className={`filter-pill-btn ${friendReactionFilter === 'likes' ? 'active' : ''}`}
+                                                onClick={() => setFriendReactionFilter('likes')}
+                                            >
+                                                <FaThumbsUp size={11} style={{ color: '#2ed573' }} /> Beğenilenler ({friendActivity.likedContent.filter(i => (i.likedByFriends || []).length > 0).length})
+                                            </button>
+                                            <button
+                                                className={`filter-pill-btn ${friendReactionFilter === 'dislikes' ? 'active' : ''}`}
+                                                onClick={() => setFriendReactionFilter('dislikes')}
+                                            >
+                                                <FaThumbsDown size={11} style={{ color: '#ff7675' }} /> Dislike Atılanlar ({friendActivity.likedContent.filter(i => (i.dislikedByFriends || []).length > 0).length})
+                                            </button>
+                                        </div>
+
+                                        {sortFriendItems(friendActivity.likedContent)
+                                            .filter(item => {
+                                                if (friendReactionFilter === 'likes') return (item.likedByFriends || []).length > 0;
+                                                if (friendReactionFilter === 'dislikes') return (item.dislikedByFriends || []).length > 0;
+                                                return true;
+                                            })
+                                            .filter(filterFriendItem).length === 0 ? (
                                             <div className="glass-panel" style={{ padding: '2.5rem', textAlign: 'center', color: 'var(--text-muted)' }}>
-                                                Arkadaşlarınızın beğendiği bir içerik bulunmuyor.
+                                                Arkadaşlarınızın bu kategoride bir tepkisi bulunmuyor.
                                             </div>
                                         ) : (
-                                            friendActivity.likedContent.filter(filterFriendItem).map(item => {
-                                                const likedBy = item.likedByFriends || [];
-                                                const friendNames = likedBy.map(f => f.username).join(', ');
-
-                                                return (
+                                            sortFriendItems(friendActivity.likedContent)
+                                                .filter(item => {
+                                                    if (friendReactionFilter === 'likes') return (item.likedByFriends || []).length > 0;
+                                                    if (friendReactionFilter === 'dislikes') return (item.dislikedByFriends || []).length > 0;
+                                                    return true;
+                                                })
+                                                .filter(filterFriendItem)
+                                                .map(item => (
                                                     <div key={item._id} className="glass-panel" style={{ padding: '1.5rem' }}>
-                                                        {/* Friend Liked Banner */}
-                                                        <div className="friend-liked-banner">
-                                                            <FaHeart size={14} style={{ color: '#ff7675' }} />
-                                                            <div className="friend-avatar-stack">
-                                                                {likedBy.slice(0, 3).map((f, i) => (
-                                                                    f.profilePic ? (
-                                                                        <img key={i} src={f.profilePic} alt={f.username} title={f.username} />
-                                                                    ) : (
-                                                                        <div key={i} className="avatar-fallback" title={f.username} style={{ background: 'var(--primary-color)', color: '#000', fontSize: '0.65rem', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}>
-                                                                            {f.username?.[0]?.toUpperCase() || 'U'}
-                                                                        </div>
-                                                                    )
-                                                                ))}
-                                                            </div>
-                                                            <div>
-                                                                <span className="friend-names">{friendNames || 'Arkadaşın'}</span> bunu beğendi
-                                                            </div>
-                                                        </div>
+                                                        {/* Clickable Friend Names & Avatars Reaction Banner */}
+                                                        {renderFriendReactionBanner(item)}
 
-                                                        {/* Actual Content: Review, List or Comment */}
+                                                        {/* Review Item */}
                                                         {item.activityType === 'liked_review' && (
                                                             <div className="review-content-wrapper" style={{ display: 'flex', gap: '1rem' }}>
                                                                 <Link to={`/${item.mediaType || 'movie'}/${item.tmdbId}`} style={{ flexShrink: 0 }}>
@@ -1186,7 +1338,7 @@ const Community = () => {
                                                                 <div style={{ flex: 1 }}>
                                                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.4rem' }}>
                                                                         <div>
-                                                                            <Link to={item.user ? `/profile/${item.user.username || item.user._id || item.user}` : '#'} style={{ textDecoration: 'none', color: '#fff', fontWeight: 700, fontSize: '0.95rem' }}>
+                                                                            <Link to={item.user?.username ? `/profile/${item.user.username}` : '#'} style={{ textDecoration: 'none', color: '#fff', fontWeight: 700, fontSize: '0.95rem' }}>
                                                                                 {item.user?.username || 'Kullanıcı'}
                                                                             </Link>
                                                                             <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: 600 }}>
@@ -1213,11 +1365,12 @@ const Community = () => {
                                                             </div>
                                                         )}
 
+                                                        {/* List Item */}
                                                         {item.activityType === 'liked_list' && (
                                                             <div>
                                                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.5rem' }}>
-                                                                    <div>
-                                                                        <Link to={item.user ? `/profile/${item.user.username || item.user._id || item.user}` : '#'} style={{ textDecoration: 'none', color: '#fff', fontWeight: 700, fontSize: '0.95rem' }}>
+                                                                    <div style={{ flex: 1 }}>
+                                                                        <Link to={item.user?.username ? `/profile/${item.user.username}` : '#'} style={{ textDecoration: 'none', color: '#fff', fontWeight: 700, fontSize: '0.95rem' }}>
                                                                             {item.user?.username || 'Kullanıcı'}
                                                                         </Link>
                                                                         <h4 style={{ fontSize: '1.2rem', margin: '0.3rem 0', color: '#fff' }}>{item.name}</h4>
@@ -1233,18 +1386,46 @@ const Community = () => {
                                                                     </div>
                                                                 </div>
 
-                                                                {/* Cover row preview */}
+                                                                {/* Cover row preview: Single-row horizontal scroll */}
                                                                 {item.items?.length > 0 && (
-                                                                    <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.8rem', overflow: 'hidden' }}>
-                                                                        {item.items.slice(0, 6).map((subItem, i) => (
-                                                                            <Link to={`/${subItem.mediaType || 'movie'}/${subItem.tmdbId}`} key={i} style={{ flexShrink: 0 }}>
+                                                                    <div>
+                                                                        <div className="list-preview-scroll-row">
+                                                                            {item.items.slice(0, 8).map((subItem, i) => (
+                                                                                <Link to={`/${subItem.mediaType || 'movie'}/${subItem.tmdbId}`} key={i} style={{ flexShrink: 0 }}>
+                                                                                    {subItem.posterPath ? (
+                                                                                        <img src={getImageUrl(subItem.posterPath, 'w92')} alt={subItem.title} style={{ width: '42px', height: '62px', objectFit: 'cover', borderRadius: '6px' }} />
+                                                                                    ) : (
+                                                                                        <div style={{ width: '42px', height: '62px', background: 'rgba(255,255,255,0.1)', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                                                            <FaFilm size={12} color="var(--text-muted)" />
+                                                                                        </div>
+                                                                                    )}
+                                                                                </Link>
+                                                                            ))}
+                                                                            {item.items.length > 8 && (
+                                                                                <div style={{ width: '42px', height: '62px', background: 'rgba(255,255,255,0.08)', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8rem', fontWeight: 'bold', color: 'var(--primary-color)', flexShrink: 0, border: '1px solid rgba(212, 175, 55, 0.3)' }}>
+                                                                                    +{item.items.length - 8}
+                                                                                </div>
+                                                                            )}
+                                                                        </div>
+                                                                        <button className="list-expand-btn" onClick={() => toggleList(item._id)}>
+                                                                            {expandedListId === item._id ? <><FaChevronUp size={10} /> Listeyi Kapat</> : <><FaChevronDown size={10} /> Tümünü Göster ({item.items.length})</>}
+                                                                        </button>
+                                                                    </div>
+                                                                )}
+
+                                                                {/* Expanded Grid for Liked List */}
+                                                                {expandedListId === item._id && item.items?.length > 0 && (
+                                                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(95px, 1fr))', gap: '0.8rem', marginTop: '1.2rem', paddingTop: '1.2rem', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+                                                                        {item.items.map(subItem => (
+                                                                            <Link to={`/${subItem.mediaType || 'movie'}/${subItem.tmdbId}`} key={subItem.tmdbId} style={{ textDecoration: 'none', color: '#fff', textAlign: 'center' }} className="hover-scale">
                                                                                 {subItem.posterPath ? (
-                                                                                    <img src={getImageUrl(subItem.posterPath, 'w92')} alt={subItem.title} style={{ width: '40px', height: '60px', objectFit: 'cover', borderRadius: '4px' }} />
+                                                                                    <img src={getImageUrl(subItem.posterPath, 'w200')} alt={subItem.title} style={{ width: '100%', borderRadius: '8px', marginBottom: '0.4rem' }} />
                                                                                 ) : (
-                                                                                    <div style={{ width: '40px', height: '60px', background: 'rgba(255,255,255,0.1)', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                                                                        <FaFilm size={12} color="var(--text-muted)" />
+                                                                                    <div style={{ width: '100%', aspectRatio: '2/3', background: 'rgba(255,255,255,0.1)', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '0.4rem' }}>
+                                                                                        <FaFilm />
                                                                                     </div>
                                                                                 )}
+                                                                                <div style={{ fontSize: '0.78rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{subItem.title}</div>
                                                                             </Link>
                                                                         ))}
                                                                     </div>
@@ -1252,10 +1433,11 @@ const Community = () => {
                                                             </div>
                                                         )}
 
+                                                        {/* Comment Item */}
                                                         {item.activityType === 'liked_comment' && (
                                                             <div>
                                                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.6rem' }}>
-                                                                    <Link to={item.user ? `/profile/${item.user.username || item.user._id || item.user}` : '#'} style={{ textDecoration: 'none', color: '#fff', fontWeight: 700, fontSize: '0.9rem' }}>
+                                                                    <Link to={item.user?.username ? `/profile/${item.user.username}` : '#'} style={{ textDecoration: 'none', color: '#fff', fontWeight: 700, fontSize: '0.9rem' }}>
                                                                         {item.user?.username || 'Kullanıcı'}
                                                                     </Link>
                                                                     <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
@@ -1263,25 +1445,8 @@ const Community = () => {
                                                                     </span>
                                                                 </div>
 
-                                                                {item.targetInfo && (
-                                                                    <Link to={item.targetInfo.link || '#'} className="target-reference-card">
-                                                                        {item.targetInfo.posterPath ? (
-                                                                            <img src={getImageUrl(item.targetInfo.posterPath, 'w92')} alt="" className="target-reference-thumb" />
-                                                                        ) : (
-                                                                            <div className="target-reference-thumb">
-                                                                                {item.targetType === 'review' ? <FaFilm size={14} color="var(--primary-color)" /> : <FaList size={14} color="var(--primary-color)" />}
-                                                                            </div>
-                                                                        )}
-                                                                        <div style={{ flex: 1, minWidth: 0 }}>
-                                                                            <div style={{ fontSize: '0.72rem', color: 'var(--primary-color)', fontWeight: 600 }}>
-                                                                                {item.targetType === 'review' ? 'Film İncelemesine Yorum' : 'Listeye Yorum'}
-                                                                            </div>
-                                                                            <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#fff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                                                                {item.targetInfo.title || 'İçerik'}
-                                                                            </div>
-                                                                        </div>
-                                                                    </Link>
-                                                                )}
+                                                                {/* Rich Target Reference Box for Liked Comment */}
+                                                                {renderCommentTargetBox(item)}
 
                                                                 <p style={{ color: '#eee', fontSize: '0.92rem', margin: '0.5rem 0' }}>
                                                                     {item.content}
@@ -1289,8 +1454,7 @@ const Community = () => {
                                                             </div>
                                                         )}
                                                     </div>
-                                                );
-                                            })
+                                                ))
                                         )}
                                     </div>
                                 )}

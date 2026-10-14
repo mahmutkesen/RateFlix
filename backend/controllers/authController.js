@@ -213,8 +213,10 @@ exports.getUserProfile = async (req, res) => {
         const lists = await List.find({ 
             user: user._id, 
             ...(isMyProfile ? {} : { isPublic: true }) 
-        });
-        const reviews = await Review.find({ user: user._id }).sort({ createdAt: -1 });
+        }).populate('user', 'username profilePic');
+        const reviews = await Review.find({ user: user._id })
+            .populate('user', 'username profilePic')
+            .sort({ createdAt: -1 });
 
         console.log(`[Profile Debug] User: ${user.username}, isMyProfile: ${isMyProfile}, Lists Found: ${lists.length}`);
 
