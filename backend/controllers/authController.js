@@ -13,20 +13,42 @@ exports.register = async (req, res) => {
     try {
         const { username, email, password } = req.body;
         
-        let user = await User.findOne({ $or: [{ email }, { username }] });
+        if (!username || !email || !password || typeof username !== 'string' || typeof email !== 'string' || typeof password !== 'string') {
+            return res.status(400).json({ message: 'Lütfen tüm alanları geçerli metin olarak doldurun.' });
+        }
+
+        const trimmedUsername = username.trim();
+        const trimmedEmail = email.trim().toLowerCase();
+
+        if (trimmedUsername.length < 3 || trimmedUsername.length > 30) {
+            return res.status(400).json({ message: 'Kullanıcı adı 3 ile 30 karakter arasında olmalıdır.' });
+        }
+
+        const usernameRegex = /^[a-zA-Z0-9_.-]+$/;
+        if (!usernameRegex.test(trimmedUsername)) {
+            return res.status(400).json({ message: 'Kullanıcı adı yalnızca harf, rakam, alt çizgi, nokta ve tire içerebilir.' });
+        }
+
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(trimmedEmail) || trimmedEmail.length > 100) {
+            return res.status(400).json({ message: 'Geçerli bir e-posta adresi giriniz.' });
+        }
+
+        if (password.length < 6 || password.length > 128) {
+            return res.status(400).json({ message: 'Şifre en az 6, en fazla 128 karakter olmalıdır.' });
+        }
+
+        let user = await User.findOne({ $or: [{ email: trimmedEmail }, { username: trimmedUsername }] });
         if (user) {
-            return res.status(400).json({ message: 'User already exists' });
+            return res.status(400).json({ message: 'Bu kullanıcı adı veya e-posta zaten kullanılıyor.' });
         }
 
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(password, salt);
 
-        const verificationToken = crypto.randomBytes(20).toString('hex');
-        const hashedToken = crypto.createHash('sha256').update(verificationToken).digest('hex');
-
         user = new User({
-            username,
-            email,
+            username: trimmedUsername,
+            email: trimmedEmail,
             password: hashedPassword,
             verificationToken: undefined,
             isVerified: true
@@ -45,11 +67,10 @@ exports.register = async (req, res) => {
             await List.insertMany(defaultLists);
         } catch (listErr) {
             console.error("Default list creation error:", listErr);
-            // We continue as user is already created, getUserLists will attempt to restore these later if needed
         }
 
         // Send Welcome Email (Non-blocking response)
-        const message = `RateFlix'e hoş geldiniz, ${username}!\n\nHesabınız başarıyla oluşturuldu ve kullanıma hazır. Keyifli seyirler dileriz!`;
+        const message = `RateFlix'e hoş geldiniz, ${trimmedUsername}!\n\nHesabınız başarıyla oluşturuldu ve kullanıma hazır. Keyifli seyirler dileriz!`;
         
         try {
             sendEmail({ 
@@ -58,27 +79,25 @@ exports.register = async (req, res) => {
                 message
             }).catch(e => console.error("Welcome email background error:", e));
 
-            // Asenkron Bildirim Fırlat
             publishNotification({
                 userId: user._id,
                 type: 'SYSTEM',
-                message: `RateFlix'e hoş geldiniz, ${username}!`
+                message: `RateFlix'e hoş geldiniz, ${trimmedUsername}!`
             });
 
-            res.status(201).json({ message: 'Kayıt başarılı! Şimdi giriş yapabilirsiniz.' });
+            return res.status(201).json({ message: 'Kayıt başarılı! Şimdi giriş yapabilirsiniz.' });
         } catch (err) {
-            // Asenkron Bildirim Fırlat
             publishNotification({
                 userId: user._id,
                 type: 'SYSTEM',
-                message: `RateFlix'e hoş geldiniz, ${username}!`
+                message: `RateFlix'e hoş geldiniz, ${trimmedUsername}!`
             });
-            res.status(201).json({ message: 'Kayıt başarılı! Şimdi giriş yapabilirsiniz.' });
+            return res.status(201).json({ message: 'Kayıt başarılı! Şimdi giriş yapabilirsiniz.' });
         }
 
     } catch (err) {
         console.error("Register Error:", err);
-        res.status(500).send('Server Error');
+        res.status(500).json({ message: 'Sunucu hatası oluştu' });
     }
 };
 
@@ -87,11 +106,16 @@ exports.login = async (req, res) => {
     try {
         const { email, password } = req.body;
         
-        const user = await User.findOne({ email });
-        if (!user) return res.status(400).json({ message: 'Invalid credentials' });
+        if (!email || !password || typeof email !== 'string' || typeof password !== 'string') {
+            return res.status(400).json({ message: 'E-posta ve şifre zorunludur' });
+        }
+
+        const trimmedEmail = email.trim().toLowerCase();
+        const user = await User.findOne({ email: trimmedEmail });
+        if (!user) return res.status(400).json({ message: 'Geçersiz e-posta veya şifre' });
 
         const isMatch = await bcrypt.compare(password, user.password);
-        if (!isMatch) return res.status(400).json({ message: 'Invalid credentials' });
+        if (!isMatch) return res.status(400).json({ message: 'Geçersiz e-posta veya şifre' });
 
         /* Skipping isVerified check for simplified flow */
 
@@ -207,13 +231,17 @@ exports.getUserProfile = async (req, res) => {
 exports.searchUsers = async (req, res) => {
     try {
         const q = req.query.q;
-        if (!q) return res.json([]);
-        const users = await User.find({ username: { $regex: new RegExp(q, 'i') } })
+        if (!q || typeof q !== 'string') return res.json([]);
+        const safeQuery = q.trim().slice(0, 50).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        if (!safeQuery) return res.json([]);
+
+        const users = await User.find({ username: { $regex: new RegExp(safeQuery, 'i') } })
             .select('username profilePic role')
             .limit(10);
         res.json(users);
     } catch (err) {
-        res.status(500).send('Server Error');
+        console.error('searchUsers error:', err);
+        res.status(500).json({ message: 'Sunucu hatası' });
     }
 };
 
@@ -284,14 +312,19 @@ exports.unfollowUser = async (req, res) => {
         return res.json({ message: "Takipten çıkıldı" });
     } catch (err) {
         console.error(`[Social Error] unfollowUser:`, err);
-        return res.status(500).json({ message: "Sunucu hatası: " + err.message });
+        return res.status(500).json({ message: "Sunucu hatası oluştu" });
     }
 };
 
 exports.forgotPassword = async (req, res) => {
     try {
         const { email } = req.body;
-        const user = await User.findOne({ email });
+        if (!email || typeof email !== 'string') {
+            return res.status(400).json({ message: 'Geçerli bir e-posta adresi giriniz.' });
+        }
+
+        const trimmedEmail = email.trim().toLowerCase();
+        const user = await User.findOne({ email: trimmedEmail });
         if (!user) {
             return res.status(404).json({ message: 'Bu e-posta adresine ait bir kullanıcı bulunamadı.' });
         }
@@ -328,7 +361,11 @@ exports.resetPassword = async (req, res) => {
     try {
         const { token, newPassword } = req.body;
         
-        const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+        if (!token || !newPassword || typeof token !== 'string' || typeof newPassword !== 'string' || newPassword.length < 6) {
+            return res.status(400).json({ message: 'Geçerli bir token ve en az 6 karakterli şifre giriniz.' });
+        }
+
+        const hashedToken = crypto.createHash('sha256').update(token.trim()).digest('hex');
         const user = await User.findOne({
             resetPasswordToken: hashedToken,
             resetPasswordExpire: { $gt: Date.now() }

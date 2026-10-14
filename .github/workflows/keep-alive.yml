@@ -1,0 +1,22 @@
+name: Render & DB Keep-Alive Cron
+
+on:
+  schedule:
+    # Render free tier 15 dakikalık hareketsizlikte uyku moduna geçer.
+    # Bu cronjob her 14 dakikada bir otomatik çalışarak API ve veritabanını 7/24 uyanık tutar.
+    - cron: '*/14 * * * *'
+  workflow_dispatch: # GitHub Actions sayfasından elle de tetiklenebilir
+
+jobs:
+  ping-api:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping RateFlix Backend & Database Health
+        run: |
+          echo "Pinging RateFlix Backend..."
+          RESPONSE=$(curl -s -m 60 -w "\nHTTP_STATUS:%{http_code}" "https://rateflix-backend.onrender.com/api/health" || true)
+          echo "$RESPONSE"
+          
+          # Yedek kök dizin kontrolü
+          curl -s -m 30 "https://rateflix-backend.onrender.com/" || true
+          echo "Keep-alive ping completed successfully."

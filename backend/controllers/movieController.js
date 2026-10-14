@@ -71,11 +71,18 @@ exports.getTopRatedMovies = async (req, res) => {
 exports.searchMovies = async (req, res) => {
     try {
         const { q, page = 1 } = req.query;
-        if (!q) return res.status(400).json({ message: 'Search query is required' });
-        const response = await tmdb.get(`/search/movie?query=${q}&page=${page}`);
+        if (!q || typeof q !== 'string' || !q.trim()) {
+            return res.status(400).json({ message: 'Arama sorgusu gereklidir' });
+        }
+        const safeQuery = q.trim().slice(0, 100);
+        const safePage = Math.max(1, parseInt(page, 10) || 1);
+        const response = await tmdb.get('/search/movie', {
+            params: { query: safeQuery, page: safePage }
+        });
         res.json(response.data);
     } catch (error) {
-        res.status(500).json({ message: 'Error searching movies' });
+        console.error('searchMovies error:', error.message);
+        res.status(500).json({ message: 'Film araması sırasında bir hata oluştu' });
     }
 };
 
@@ -84,11 +91,14 @@ exports.searchMovies = async (req, res) => {
 exports.filterMovies = async (req, res) => {
     try {
         const { genre, page = 1 } = req.query;
-        const endpoint = genre ? `/discover/movie?with_genres=${genre}&page=${page}` : `/movie/now_playing?page=${page}`;
-        const response = await tmdb.get(endpoint);
+        const safePage = Math.max(1, parseInt(page, 10) || 1);
+        const endpoint = genre ? '/discover/movie' : '/movie/now_playing';
+        const params = genre ? { with_genres: String(genre).slice(0, 50), page: safePage } : { page: safePage };
+        const response = await tmdb.get(endpoint, { params });
         res.json(response.data);
     } catch (error) {
-        res.status(500).json({ message: 'Error filtering movies' });
+        console.error('filterMovies error:', error.message);
+        res.status(500).json({ message: 'Film listesi getirilirken bir hata oluştu' });
     }
 };
 

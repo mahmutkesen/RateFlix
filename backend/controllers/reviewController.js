@@ -143,46 +143,62 @@ exports.getUserReviews = async (req, res) => {
 
 exports.addReview = async (req, res) => {
     try {
-        const { tmdbId, mediaType, rating, reviewText } = req.body;
+        const { tmdbId, mediaType, rating, reviewText, movieTitle, posterPath } = req.body;
         
+        if (!tmdbId) {
+            return res.status(400).json({ message: 'İçerik kimliği (tmdbId) gereklidir' });
+        }
+
+        const numRating = Number(rating);
+        if (isNaN(numRating) || numRating < 0.5 || numRating > 5) {
+            return res.status(400).json({ message: 'Puan 0.5 ile 5 arasında olmalıdır' });
+        }
+
+        const validMediaType = ['movie', 'tv'].includes(mediaType) ? mediaType : 'movie';
+        const safeReviewText = typeof reviewText === 'string' ? reviewText.trim().slice(0, 2000) : '';
+        const safeMovieTitle = typeof movieTitle === 'string' ? movieTitle.trim().slice(0, 200) : '';
+        const safePosterPath = typeof posterPath === 'string' ? posterPath.trim().slice(0, 300) : '';
+
         if (process.env.USE_MEMORY_DB === 'true') {
-            let existing = memReviews.find(r => r.user?._id === req.user.id && r.tmdbId === tmdbId && r.mediaType === mediaType);
+            let existing = memReviews.find(r => r.user?._id === req.user.id && r.tmdbId === String(tmdbId) && r.mediaType === validMediaType);
             if (existing) {
-                existing.rating = rating;
-                existing.reviewText = reviewText;
+                existing.rating = numRating;
+                existing.reviewText = safeReviewText;
                 existing.updatedAt = new Date();
                 return res.json(existing);
             }
-            const review = { _id: Date.now().toString(), user: { _id: req.user.id, username: 'TestUser' }, tmdbId, mediaType, rating, reviewText, updatedAt: new Date() };
+            const review = { _id: Date.now().toString(), user: { _id: req.user.id, username: 'TestUser' }, tmdbId: String(tmdbId), mediaType: validMediaType, rating: numRating, reviewText: safeReviewText, updatedAt: new Date() };
             memReviews.push(review);
             return res.status(201).json(review);
         }
 
-        let review = await Review.findOne({ user: req.user.id, tmdbId, mediaType });
-        const { movieTitle, posterPath } = req.body;
+        let review = await Review.findOne({ user: req.user.id, tmdbId: String(tmdbId), mediaType: validMediaType });
         
         if (review) {
-            review.rating = rating;
-            review.reviewText = reviewText;
-            if (movieTitle) review.movieTitle = movieTitle;
-            if (posterPath) review.posterPath = posterPath;
+            review.rating = numRating;
+            review.reviewText = safeReviewText;
+            if (safeMovieTitle) review.movieTitle = safeMovieTitle;
+            if (safePosterPath) review.posterPath = safePosterPath;
             await review.save();
             return res.json(review);
         }
         review = new Review({ 
             user: req.user.id, 
-            tmdbId, 
-            mediaType, 
-            rating, 
-            reviewText, 
-            movieTitle, 
-            posterPath 
+            tmdbId: String(tmdbId), 
+            mediaType: validMediaType, 
+            rating: numRating, 
+            reviewText: safeReviewText, 
+            movieTitle: safeMovieTitle, 
+            posterPath: safePosterPath 
         });
         await review.save();
         // Invalidate cache
         topRatedCache = { movie: { data: null, timestamp: 0 }, tv: { data: null, timestamp: 0 }, all: { data: null, timestamp: 0 } };
         res.status(201).json(review);
-    } catch (err) { res.status(500).send('Server Error'); }
+    } catch (err) {
+        console.error('addReview error:', err);
+        res.status(500).json({ message: 'Sunucu hatası' });
+    }
 };
 
 exports.deleteReview = async (req, res) => {
@@ -191,36 +207,42 @@ exports.deleteReview = async (req, res) => {
             const index = memReviews.findIndex(r => r._id === req.params.id);
             if (index !== -1 && (memReviews[index].user?._id === req.user.id || req.user.role === 'admin')) {
                  memReviews.splice(index, 1);
-                 return res.json({ message: 'Review removed' });
+                 return res.json({ message: 'Değerlendirme silindi' });
             }
-            return res.status(404).json({ message: 'Review not found or not authorized' });
+            return res.status(404).json({ message: 'Değerlendirme bulunamadı veya yetkiniz yok' });
+        }
+
+        const mongoose = require('mongoose');
+        if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+            return res.status(400).json({ message: 'Geçersiz değerlendirme kimliği' });
         }
 
         const review = await Review.findById(req.params.id);
-        if (!review) return res.status(404).json({ message: 'Review not found' });
+        if (!review) return res.status(404).json({ message: 'Değerlendirme bulunamadı' });
         
-        console.log(`[AUTH DEBUG] Deleting review: ${req.params.id}`);
-        console.log(`[AUTH DEBUG] Review User: ${review.user.toString()}`);
-        console.log(`[AUTH DEBUG] Req User: ${req.user.id}`);
-        console.log(`[AUTH DEBUG] User Role: ${req.user.role}`);
-
         if (review.user.toString() !== req.user.id && req.user.role !== 'admin') {
-            console.log(`[AUTH DEBUG] AUTHORIZATION FAILED`);
-            return res.status(403).json({ message: 'User not authorized' });
+            return res.status(403).json({ message: 'Bu işlem için yetkiniz yok' });
         }
         
-        console.log(`[AUTH DEBUG] AUTHORIZATION SUCCESS`);
         await review.deleteOne();
         // Invalidate cache
         topRatedCache = { movie: { data: null, timestamp: 0 }, tv: { data: null, timestamp: 0 }, all: { data: null, timestamp: 0 } };
-        res.json({ message: 'Review removed' });
-    } catch (err) { res.status(500).send('Server Error'); }
+        res.json({ message: 'Değerlendirme silindi' });
+    } catch (err) {
+        console.error('deleteReview error:', err);
+        res.status(500).json({ message: 'Sunucu hatası' });
+    }
 };
 
 exports.toggleReviewLike = async (req, res) => {
     try {
+        const mongoose = require('mongoose');
+        if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+            return res.status(400).json({ message: 'Geçersiz kimlik' });
+        }
+
         const review = await Review.findById(req.params.id);
-        if (!review) return res.status(404).json({ message: 'Review not found' });
+        if (!review) return res.status(404).json({ message: 'Değerlendirme bulunamadı' });
         const userId = req.user.id;
         const liked = review.likes.map(id => id.toString()).includes(userId);
         if (liked) {
@@ -231,13 +253,21 @@ exports.toggleReviewLike = async (req, res) => {
         }
         await review.save();
         res.json({ likes: review.likes.length, dislikes: review.dislikes.length, liked: !liked, disliked: false });
-    } catch (err) { res.status(500).send('Server Error'); }
+    } catch (err) {
+        console.error('toggleReviewLike error:', err);
+        res.status(500).json({ message: 'Sunucu hatası' });
+    }
 };
 
 exports.toggleReviewDislike = async (req, res) => {
     try {
+        const mongoose = require('mongoose');
+        if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+            return res.status(400).json({ message: 'Geçersiz kimlik' });
+        }
+
         const review = await Review.findById(req.params.id);
-        if (!review) return res.status(404).json({ message: 'Review not found' });
+        if (!review) return res.status(404).json({ message: 'Değerlendirme bulunamadı' });
         const userId = req.user.id;
         const disliked = review.dislikes.map(id => id.toString()).includes(userId);
         if (disliked) {
@@ -248,6 +278,9 @@ exports.toggleReviewDislike = async (req, res) => {
         }
         await review.save();
         res.json({ likes: review.likes.length, dislikes: review.dislikes.length, liked: false, disliked: !disliked });
-    } catch (err) { res.status(500).send('Server Error'); }
+    } catch (err) {
+        console.error('toggleReviewDislike error:', err);
+        res.status(500).json({ message: 'Sunucu hatası' });
+    }
 };
 

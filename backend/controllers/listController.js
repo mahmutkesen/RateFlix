@@ -74,55 +74,80 @@ exports.getList = async (req, res) => {
     try {
         if (process.env.USE_MEMORY_DB === 'true') {
             const list = memLists.find(l => l._id === req.params.id);
-            if (!list) return res.status(404).json({ message: 'List not found' });
-            if (!list.isPublic && list.user !== req.user?.id) return res.status(403).json({ message: 'Not authorized' });
+            if (!list) return res.status(404).json({ message: 'Liste bulunamadı' });
+            if (!list.isPublic && list.user !== req.user?.id) return res.status(403).json({ message: 'Yetkisiz erişim' });
             return res.json(list);
         }
 
+        const mongoose = require('mongoose');
+        if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+            return res.status(400).json({ message: 'Geçersiz liste kimliği' });
+        }
+
         const list = await List.findById(req.params.id).populate('user', 'username');
-        if (!list) return res.status(404).json({ message: 'List not found' });
-        if (!list.isPublic && list.user._id.toString() !== req.user?.id) return res.status(403).json({ message: 'Not authorized' });
+        if (!list) return res.status(404).json({ message: 'Liste bulunamadı' });
+        if (!list.isPublic && list.user._id.toString() !== req.user?.id) return res.status(403).json({ message: 'Yetkisiz erişim' });
         res.json(list);
-    } catch (err) { res.status(500).send('Server Error'); }
+    } catch (err) {
+        console.error('getList error:', err);
+        res.status(500).json({ message: 'Sunucu hatası' });
+    }
 };
 
 exports.createList = async (req, res) => {
     try {
         const { name, description, isPublic, type } = req.body;
         
+        if (!name || typeof name !== 'string' || !name.trim()) {
+            return res.status(400).json({ message: 'Liste adı zorunludur' });
+        }
+
+        const safeName = name.trim().slice(0, 100);
+        const safeDescription = typeof description === 'string' ? description.trim().slice(0, 500) : '';
+
         if (process.env.USE_MEMORY_DB === 'true') {
-            const list = { _id: Date.now().toString(), user: req.user.id, name, description, isPublic: isPublic !== false, type: type || 'custom', items: [], createdAt: new Date() };
+            const list = { _id: Date.now().toString(), user: req.user.id, name: safeName, description: safeDescription, isPublic: isPublic !== false, type: type || 'custom', items: [], createdAt: new Date() };
             memLists.push(list);
             return res.status(201).json(list);
         }
 
-        const newList = new List({ user: req.user.id, name, description, isPublic, type: type || 'custom' });
+        const newList = new List({ user: req.user.id, name: safeName, description: safeDescription, isPublic: Boolean(isPublic), type: type || 'custom' });
         const list = await newList.save();
         res.status(201).json(list);
-    } catch (err) { res.status(500).send('Server Error'); }
+    } catch (err) {
+        console.error('createList error:', err);
+        res.status(500).json({ message: 'Sunucu hatası' });
+    }
 };
 
 exports.addItemToList = async (req, res) => {
     try {
         const { tmdbId, mediaType, posterPath } = req.body;
+        if (!tmdbId) {
+            return res.status(400).json({ message: 'İçerik kimliği gereklidir' });
+        }
+
+        const mongoose = require('mongoose');
+        if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+            return res.status(400).json({ message: 'Geçersiz liste kimliği' });
+        }
         
         if (process.env.USE_MEMORY_DB === 'true') {
             const list = memLists.find(l => l._id === req.params.id);
-            if (!list) return res.status(404).json({ message: 'List not found' });
-            if (list.user !== req.user.id) return res.status(403).json({ message: 'Not authorized' });
-            if (list.items.some(item => String(item.tmdbId) === String(tmdbId))) return res.status(400).json({ message: 'Item already in list' });
+            if (!list) return res.status(404).json({ message: 'Liste bulunamadı' });
+            if (list.user !== req.user.id) return res.status(403).json({ message: 'Yetkisiz işlem' });
+            if (list.items.some(item => String(item.tmdbId) === String(tmdbId))) return res.status(400).json({ message: 'İçerik zaten listede' });
             list.items.unshift({ tmdbId: String(tmdbId), mediaType, posterPath, addedAt: new Date() });
             return res.json(list);
         }
 
         const list = await List.findById(req.params.id);
-        if (!list) return res.status(404).json({ message: 'List not found' });
-        if (list.user.toString() !== req.user.id) return res.status(403).json({ message: 'Not authorized' });
-        if (list.items.some(item => String(item.tmdbId) === String(tmdbId))) return res.status(400).json({ message: 'Item already in list' });
+        if (!list) return res.status(404).json({ message: 'Liste bulunamadı' });
+        if (list.user.toString() !== req.user.id) return res.status(403).json({ message: 'Yetkisiz işlem' });
+        if (list.items.some(item => String(item.tmdbId) === String(tmdbId))) return res.status(400).json({ message: 'İçerik zaten listede' });
         list.items.unshift({ tmdbId: String(tmdbId), mediaType, posterPath });
         await list.save();
 
-        // Asenkron RabbitMQ Bildirimi Fırlat
         publishNotification({
             userId: req.user.id,
             type: 'LIST_UPDATE',
@@ -130,74 +155,101 @@ exports.addItemToList = async (req, res) => {
         });
 
         res.json(list);
-    } catch (err) { res.status(500).send('Server Error'); }
+    } catch (err) {
+        console.error('addItemToList error:', err);
+        res.status(500).json({ message: 'Sunucu hatası' });
+    }
 };
 
 exports.removeItemFromList = async (req, res) => {
     try {
+        const mongoose = require('mongoose');
+        if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+            return res.status(400).json({ message: 'Geçersiz liste kimliği' });
+        }
+
         if (process.env.USE_MEMORY_DB === 'true') {
             const list = memLists.find(l => l._id === req.params.id);
-            if (!list) return res.status(404).json({ message: 'List not found' });
-            if (list.user !== req.user.id) return res.status(403).json({ message: 'Not authorized' });
+            if (!list) return res.status(404).json({ message: 'Liste bulunamadı' });
+            if (list.user !== req.user.id) return res.status(403).json({ message: 'Yetkisiz işlem' });
             list.items = list.items.filter(item => item.tmdbId !== req.params.tmdbId);
             return res.json(list);
         }
 
         const list = await List.findById(req.params.id);
-        if (!list) return res.status(404).json({ message: 'List not found' });
-        if (list.user.toString() !== req.user.id) return res.status(403).json({ message: 'Not authorized' });
+        if (!list) return res.status(404).json({ message: 'Liste bulunamadı' });
+        if (list.user.toString() !== req.user.id) return res.status(403).json({ message: 'Yetkisiz işlem' });
         list.items = list.items.filter(item => item.tmdbId !== req.params.tmdbId);
         await list.save();
         res.json(list);
-    } catch (err) { res.status(500).send('Server Error'); }
+    } catch (err) {
+        console.error('removeItemFromList error:', err);
+        res.status(500).json({ message: 'Sunucu hatası' });
+    }
 };
 
 exports.deleteList = async (req, res) => {
     try {
+        const mongoose = require('mongoose');
+        if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+            return res.status(400).json({ message: 'Geçersiz liste kimliği' });
+        }
+
         if (process.env.USE_MEMORY_DB === 'true') {
             const index = memLists.findIndex(l => l._id === req.params.id);
-            if (index === -1) return res.status(404).json({ message: 'List not found' });
-            if (memLists[index].user !== req.user.id && req.user.role !== 'admin') return res.status(403).json({ message: 'Not authorized' });
-            if (['favorites', 'watchlist', 'watched'].includes(memLists[index].type)) return res.status(400).json({ message: 'Cannot delete default' });
+            if (index === -1) return res.status(404).json({ message: 'Liste bulunamadı' });
+            if (memLists[index].user !== req.user.id && req.user.role !== 'admin') return res.status(403).json({ message: 'Yetkisiz işlem' });
+            if (['favorites', 'watchlist', 'watched'].includes(memLists[index].type)) return res.status(400).json({ message: 'Varsayılan listeler silinemez' });
             memLists.splice(index, 1);
-            return res.json({ message: 'List removed' });
+            return res.json({ message: 'Liste silindi' });
         }
 
         const list = await List.findById(req.params.id);
-        if (!list) return res.status(404).json({ message: 'List not found' });
-        if (list.user.toString() !== req.user.id && req.user.role !== 'admin') return res.status(403).json({ message: 'Not authorized' });
-        if (['favorites', 'watchlist', 'watched'].includes(list.type)) return res.status(400).json({ message: 'Cannot delete default lists' });
+        if (!list) return res.status(404).json({ message: 'Liste bulunamadı' });
+        if (list.user.toString() !== req.user.id && req.user.role !== 'admin') return res.status(403).json({ message: 'Yetkisiz işlem' });
+        if (['favorites', 'watchlist', 'watched'].includes(list.type)) return res.status(400).json({ message: 'Varsayılan listeler silinemez' });
         await list.deleteOne();
-        res.json({ message: 'List removed' });
-    } catch (err) { res.status(500).send('Server Error'); }
+        res.json({ message: 'Liste silindi' });
+    } catch (err) {
+        console.error('deleteList error:', err);
+        res.status(500).json({ message: 'Sunucu hatası' });
+    }
 };
 
 exports.updateList = async (req, res) => {
     try {
+        const mongoose = require('mongoose');
+        if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+            return res.status(400).json({ message: 'Geçersiz liste kimliği' });
+        }
+
         const { name, description, isPublic } = req.body;
-        console.log(`[List Update Request] ID: ${req.params.id}, Public: ${isPublic}, Name: ${name}`);
         const list = await List.findById(req.params.id);
         
-        if (!list) return res.status(404).json({ message: 'List not found' });
-        if (list.user.toString() !== req.user.id) return res.status(403).json({ message: 'Not authorized' });
+        if (!list) return res.status(404).json({ message: 'Liste bulunamadı' });
+        if (list.user.toString() !== req.user.id) return res.status(403).json({ message: 'Yetkisiz işlem' });
 
-        if (name) list.name = name;
-        if (description !== undefined) list.description = description;
-        if (isPublic !== undefined) list.isPublic = isPublic;
+        if (name && typeof name === 'string') list.name = name.trim().slice(0, 100);
+        if (description !== undefined && typeof description === 'string') list.description = description.trim().slice(0, 500);
+        if (isPublic !== undefined) list.isPublic = Boolean(isPublic);
 
         await list.save();
-        console.log(`[List Update Success] ID: ${req.params.id}, Final isPublic: ${list.isPublic}`);
         res.json(list);
     } catch (err) { 
         console.error(`[List Update Error]`, err);
-        res.status(500).send('Server Error'); 
+        res.status(500).json({ message: 'Sunucu hatası' }); 
     }
 };
 
 exports.toggleListLike = async (req, res) => {
     try {
+        const mongoose = require('mongoose');
+        if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+            return res.status(400).json({ message: 'Geçersiz liste kimliği' });
+        }
+
         const list = await List.findById(req.params.id);
-        if (!list) return res.status(404).json({ message: 'List not found' });
+        if (!list) return res.status(404).json({ message: 'Liste bulunamadı' });
         const userId = req.user.id;
         const liked = list.likes.map(id => id.toString()).includes(userId);
         if (liked) {
@@ -208,13 +260,21 @@ exports.toggleListLike = async (req, res) => {
         }
         await list.save();
         res.json({ likes: list.likes.length, dislikes: list.dislikes.length, liked: !liked, disliked: false });
-    } catch (err) { res.status(500).send('Server Error'); }
+    } catch (err) {
+        console.error('toggleListLike error:', err);
+        res.status(500).json({ message: 'Sunucu hatası' });
+    }
 };
 
 exports.toggleListDislike = async (req, res) => {
     try {
+        const mongoose = require('mongoose');
+        if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+            return res.status(400).json({ message: 'Geçersiz liste kimliği' });
+        }
+
         const list = await List.findById(req.params.id);
-        if (!list) return res.status(404).json({ message: 'List not found' });
+        if (!list) return res.status(404).json({ message: 'Liste bulunamadı' });
         const userId = req.user.id;
         const disliked = list.dislikes.map(id => id.toString()).includes(userId);
         if (disliked) {
@@ -225,6 +285,9 @@ exports.toggleListDislike = async (req, res) => {
         }
         await list.save();
         res.json({ likes: list.likes.length, dislikes: list.dislikes.length, liked: false, disliked: !disliked });
-    } catch (err) { res.status(500).send('Server Error'); }
+    } catch (err) {
+        console.error('toggleListDislike error:', err);
+        res.status(500).json({ message: 'Sunucu hatası' });
+    }
 };
 
