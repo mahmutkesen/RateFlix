@@ -60,7 +60,8 @@
 .nav-search-container {
   position: relative;
   flex: 1;
-  max-width: 450px;
+  max-width: 620px;
+  margin: 0 1.5rem;
 }
 
 .nav-search {
@@ -70,20 +71,20 @@
 
 .nav-search input {
   width: 100%;
-  padding: 0.65rem 1rem 0.65rem 3rem;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(212, 175, 55, 0.15);
+  padding: 0.72rem 1.2rem 0.72rem 3.1rem;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(212, 175, 55, 0.2);
   border-radius: 50px;
   color: white;
   font-size: 0.95rem;
   outline: none;
-  transition: all 0.3s ease;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .nav-search input:focus {
-  background: rgba(0, 0, 0, 0.4);
+  background: rgba(0, 0, 0, 0.55);
   border-color: var(--primary-color);
-  box-shadow: 0 0 15px rgba(212, 175, 55, 0.15);
+  box-shadow: 0 0 20px rgba(212, 175, 55, 0.22);
 }
 
 .search-icon-min {
@@ -334,17 +335,23 @@
 
 @media (max-width: 1200px) {
   .brand-text { display: none; }
-  .nav-search-container { max-width: 320px; }
+  .nav-search-container { max-width: 480px; }
 }
 
 @media (max-width: 850px) {
+  .brand {
+    margin-right: 0.5rem;
+  }
+
   .mobile-menu-toggle {
     display: block;
+    margin-left: 0.5rem;
   }
 
   .nav-search-container {
-    max-width: 180px;
-    margin-right: 1rem;
+    max-width: none;
+    flex: 1;
+    margin: 0 0.8rem;
   }
 
   .nav-links {
