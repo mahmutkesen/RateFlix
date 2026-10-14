@@ -357,7 +357,7 @@ const Community = () => {
                     </form>
                 </div>
             )}
-            <header className="hero" style={{ maxWidth: '480px', margin: '1rem auto 2rem', padding: '1.8rem 1.4rem' }}>
+            <header className="hero" style={{ width: '100%', margin: '1rem auto 2.2rem', padding: '1.8rem 2rem' }}>
                 <h1>Topluluk Merkezi</h1>
                 <p>Diğer RateFlix üyelerinin neler izlediğini keşfedin, incelemeleri okuyun ve listeleri inceleyin.</p>
             </header>
