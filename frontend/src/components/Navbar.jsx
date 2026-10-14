@@ -175,8 +175,8 @@ const Navbar = () => {
           <span className="brand-text">Rate<span className="brand-highlight">Flix</span></span>
         </Link>
 
-        {/* Integrated Search Bar + Categories Dropdown */}
-        <div className="nav-search-wrapper" ref={searchRef}>
+        {/* Search Bar */}
+        <div className="nav-search-container" ref={searchRef}>
           <form className="nav-search" onSubmit={handleSearchSubmit}>
             <FaSearch className="search-icon-min" />
             <input 
@@ -187,17 +187,21 @@ const Navbar = () => {
               onFocus={() => searchQuery.length > 1 && setShowSuggestions(true)}
             />
           </form>
+          {showSuggestions && searchQuery && renderSuggestions()}
+        </div>
 
-          {/* Categories Dropdown right next to search */}
+        {/* Right Navigation Actions: Kategoriler | Keşfet | Topluluk | Hamburger */}
+        <div className="nav-right-actions">
+          {/* Categories Dropdown Trigger */}
           <div className="nav-category-dropdown" ref={dropdownRef}>
             <button 
               type="button"
-              className={`category-trigger-btn ${showDropdown ? 'active' : ''}`}
+              className={`nav-link-item category-trigger-btn ${showDropdown ? 'active' : ''}`}
               onClick={() => setShowDropdown(!showDropdown)}
               title="Kategorileri Keşfet"
             >
-              <FaFilm className="category-trigger-icon" />
-              <span className="category-trigger-text">Kategoriler</span>
+              <FaFilm className="nav-link-icon" />
+              <span>Kategoriler</span>
               <FaChevronDown className="dropdown-chevron" />
             </button>
             
@@ -244,18 +248,22 @@ const Navbar = () => {
             )}
           </div>
 
-          {showSuggestions && searchQuery && renderSuggestions()}
-        </div>
+          <span className="nav-divider" />
 
-        {/* Right Navigation Actions: Keşfet + Topluluk (Özel Buton) + Hamburger Menü */}
-        <div className="nav-right-actions">
-          <Link to="/" className="nav-item nav-explore-link">Keşfet</Link>
+          {/* Keşfet Link */}
+          <Link to="/" className="nav-link-item">
+            <span>Keşfet</span>
+          </Link>
 
-          {/* Distinctive Community Button */}
-          <Link to="/community" className="nav-community-btn">
-            <FaUsers className="community-btn-icon" />
+          <span className="nav-divider" />
+
+          {/* Topluluk Link */}
+          <Link to="/community" className="nav-link-item">
+            <FaUsers className="nav-link-icon" />
             <span>Topluluk</span>
           </Link>
+
+          <span className="nav-divider" />
 
           {/* Hamburger Menu Container (Profil, Listeler, Admin, Çıkış) */}
           <div className="hamburger-container" ref={hamburgerRef}>
