@@ -290,7 +290,7 @@
             "header": [],
             "body": {
               "mode": "raw",
-              "raw": "{\"email\":\"kesenmahmut01@gmail.com\",\"password\":\"12345m\"}",
+              "raw": "{\"email\":\"user@example.com\",\"password\":\"password123\"}",
               "options": {
                 "raw": {
                   "language": "json"

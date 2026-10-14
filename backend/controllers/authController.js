@@ -172,8 +172,9 @@ exports.verifyEmail = async (req, res) => {
 
 exports.testEmail = async (req, res) => {
     try {
+        const targetEmail = req.user?.email || process.env.EMAIL_USER || 'test@example.com';
         await sendEmail({
-            email: 'kesenmahmut01@gmail.com',
+            email: targetEmail,
             subject: 'RateFlix Resend Test',
             message: 'Resend entegrasyonu başarıyla tamamlandı!',
             html: '<h1>RateFlix</h1><p>Resend entegrasyonu başarıyla tamamlandı!</p>'
@@ -181,7 +182,7 @@ exports.testEmail = async (req, res) => {
         res.json({ success: true, message: 'Test email sent successfully' });
     } catch (err) {
         console.error(err);
-        res.status(500).json({ success: false, error: err.message });
+        res.status(500).json({ success: false, error: 'E-posta gönderilemedi' });
     }
 };
 
