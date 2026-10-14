@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { FaStar, FaStarHalfAlt, FaRegStar } from 'react-icons/fa';
 
-const RatingStars = ({ rating, onChange, readonly = false }) => {
+const RatingStars = ({ rating, onChange, readonly = false, size = 28 }) => {
     const [hover, setHover] = useState(null);
 
     const stars = [];
@@ -55,7 +55,7 @@ const RatingStars = ({ rating, onChange, readonly = false }) => {
                 )}
 
                 <Icon
-                    size={28}
+                    size={size}
                     color={displayRating >= halfStarValue ? '#fbbf24' : '#475569'}
                     style={{ transition: 'color 0.2s ease', display: 'block' }}
                 />
@@ -63,11 +63,14 @@ const RatingStars = ({ rating, onChange, readonly = false }) => {
         );
     }
 
+    const fontSize = size <= 18 ? '0.8rem' : size <= 22 ? '0.85rem' : '0.9rem';
+    const gap = size <= 18 ? '3px' : '4px';
+
     return (
-        <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+        <div style={{ display: 'inline-flex', gap, alignItems: 'center' }}>
             {stars}
             {displayRating > 0 && (
-                <span style={{ marginLeft: '8px', color: '#fbbf24', fontWeight: 'bold', fontSize: '0.9rem' }}>
+                <span style={{ marginLeft: `${Math.max(4, Math.round(size * 0.25))}px`, color: '#fbbf24', fontWeight: 'bold', fontSize }}>
                     {displayRating}
                 </span>
             )}

@@ -8,7 +8,7 @@ import { useToast } from '../components/Toast';
 import { 
     FaUser, FaStar, FaList, FaTrash, FaUserPlus, FaUserMinus, 
     FaFilm, FaClock, FaThumbsUp, FaThumbsDown, FaHeart, FaChevronDown, FaChevronUp, FaComment,
-    FaTimes, FaUserFriends, FaChevronRight
+    FaTimes, FaUserFriends, FaChevronRight, FaEdit
 } from 'react-icons/fa';
 import './Profile.css';
 
@@ -236,56 +236,79 @@ const Profile = () => {
         const authorLink = reviewAuthor?.username ? `/profile/${reviewAuthor.username}` : `/profile/${user.username}`;
         const authorPic = reviewAuthor?.profilePic || (reviewAuthor === user._id ? user.profilePic : '');
 
+        // Only show author if this is in a reaction context or the review is by someone else
+        const isDifferentAuthor = reviewAuthor && (
+            (typeof reviewAuthor === 'object' && reviewAuthor.username && reviewAuthor.username !== user.username) ||
+            (typeof reviewAuthor === 'string' && reviewAuthor !== user._id && reviewAuthor !== user.username)
+        );
+        const showAuthor = Boolean(reactionBadge || isDifferentAuthor);
+
         return (
-            <div key={review._id} className="glass-panel" style={{ padding: '1.2rem', display: 'flex', gap: '1.2rem', borderRadius: '14px' }}>
-                <Link to={`/${review.mediaType || 'movie'}/${review.tmdbId}`} style={{ flexShrink: 0 }}>
+            <div key={review._id} className="glass-panel profile-review-card">
+                <Link to={`/${review.mediaType || 'movie'}/${review.tmdbId}`} className="profile-review-poster-link">
                     {review.posterPath ? (
                         <img 
                             src={getImageUrl(review.posterPath, 'w92')} 
                             alt={review.movieTitle} 
-                            style={{ width: '65px', height: '98px', borderRadius: '8px', objectFit: 'cover' }} 
+                            className="profile-review-poster" 
                         />
                     ) : (
-                        <div style={{ width: '65px', height: '98px', background: 'rgba(255,255,255,0.08)', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <div className="profile-review-poster-placeholder">
                             <FaFilm color="var(--text-muted)" />
                         </div>
                     )}
                 </Link>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '0.5rem', marginBottom: '0.4rem', flexWrap: 'wrap' }}>
-                        <div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.2rem' }}>
-                                <Link to={authorLink} style={{ textDecoration: 'none' }}>
-                                    <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                                        <div style={{ width: '20px', height: '20px', borderRadius: '50%', background: 'var(--primary-gradient)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#000', fontSize: '0.65rem', overflow: 'hidden' }}>
-                                            {authorPic ? <img src={authorPic} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <FaUser />}
+                <div className="profile-review-content">
+                    <div className="profile-review-header">
+                        <div className="profile-review-title-group">
+                            {showAuthor && (
+                                <div className="profile-review-author-wrap">
+                                    <Link to={authorLink} className="profile-review-author-link">
+                                        <div className="profile-review-author-avatar">
+                                            {authorPic ? <img src={authorPic} alt="" /> : <FaUser />}
                                         </div>
                                         <span>{authorName}</span>
-                                    </div>
-                                </Link>
-                                {reactionBadge}
-                            </div>
-                            <Link to={`/${review.mediaType || 'movie'}/${review.tmdbId}`} style={{ fontWeight: 700, color: '#fff', fontSize: '1.05rem', textDecoration: 'none' }} className="hover-text-primary">
+                                    </Link>
+                                    {reactionBadge}
+                                </div>
+                            )}
+                            <Link to={`/${review.mediaType || 'movie'}/${review.tmdbId}`} className="profile-review-movie-title hover-text-primary">
                                 {review.movieTitle || 'İsimsiz İçerik'}
                             </Link>
                         </div>
-                        <RatingStars rating={review.rating} readonly />
+                        <div className="profile-review-stars-wrap">
+                            <RatingStars rating={review.rating} readonly size={17} />
+                        </div>
                     </div>
-                    <p style={{ color: '#ccc', fontSize: '0.92rem', margin: '0.4rem 0 0.8rem', fontStyle: 'italic', wordBreak: 'break-word' }}>
-                        "{review.reviewText || 'Sadece puan verdi.'}"
-                    </p>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.8rem', color: 'var(--text-muted)', paddingTop: '0.4rem', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
-                        <span><FaClock style={{ marginRight: '0.3rem' }} /> {new Date(review.createdAt).toLocaleDateString('tr-TR')}</span>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
-                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: '#2ed573' }}>
-                                <FaThumbsUp size={11} /> {review.likes?.length || 0}
-                            </span>
-                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: '#ff7675' }}>
-                                <FaThumbsDown size={11} /> {review.dislikes?.length || 0}
-                            </span>
+
+                    {review.reviewText ? (
+                        <p className="profile-review-comment">
+                            "{review.reviewText}"
+                        </p>
+                    ) : (
+                        <p className="profile-review-comment empty">
+                            <span className="empty-review-badge">Yalnızca puanlandı</span>
+                        </p>
+                    )}
+
+                    <div className="profile-review-footer">
+                        <span className="profile-review-date">
+                            <FaClock style={{ marginRight: '0.35rem' }} /> {new Date(review.createdAt).toLocaleDateString('tr-TR')}
+                        </span>
+                        <div className="profile-review-meta-actions">
+                            <div className="profile-review-reactions-count">
+                                <span className="reaction-badge-count like" title="Beğeni">
+                                    <FaThumbsUp size={11} /> {review.likes?.length || 0}
+                                </span>
+                                <span className="reaction-badge-count dislike" title="Dislike">
+                                    <FaThumbsDown size={11} /> {review.dislikes?.length || 0}
+                                </span>
+                            </div>
+
                             {allowEdit && (isMyProfile || myUser?.role === 'admin') && (
-                                <div style={{ display: 'flex', gap: '8px', marginLeft: '0.5rem' }}>
+                                <div className="profile-review-action-btns">
                                     <button 
+                                        type="button"
                                         onClick={() => setEditingReview({ 
                                             id: review._id, 
                                             tmdbId: review.tmdbId, 
@@ -295,12 +318,19 @@ const Profile = () => {
                                             movieTitle: review.movieTitle, 
                                             posterPath: review.posterPath 
                                         })} 
-                                        style={{ background: 'none', border: 'none', color: 'var(--primary-color)', cursor: 'pointer', fontSize: '0.8rem' }}
+                                        className="review-action-btn edit"
+                                        title="İncelemeyi Düzenle"
                                     >
-                                        Düzenle
+                                        <FaEdit size={11} />
+                                        <span>Düzenle</span>
                                     </button>
-                                    <button onClick={() => handleDeleteReview(review._id)} style={{ background: 'none', border: 'none', color: '#ff7675', cursor: 'pointer' }} title="Sil">
-                                        <FaTrash />
+                                    <button 
+                                        type="button"
+                                        onClick={() => handleDeleteReview(review._id)} 
+                                        className="review-action-btn delete" 
+                                        title="İncelemeyi Sil"
+                                    >
+                                        <FaTrash size={11} />
                                     </button>
                                 </div>
                             )}
@@ -318,27 +348,36 @@ const Profile = () => {
         const ownerLink = listOwner?.username ? `/profile/${listOwner.username}` : `/profile/${user.username}`;
         const ownerPic = listOwner?.profilePic || (listOwner === user._id ? user.profilePic : '');
 
+        // Only show owner badge if in reaction context or list belongs to another user
+        const isDifferentOwner = listOwner && (
+            (typeof listOwner === 'object' && listOwner.username && listOwner.username !== user.username) ||
+            (typeof listOwner === 'string' && listOwner !== user._id && listOwner !== user.username)
+        );
+        const showOwner = Boolean(reactionBadge || isDifferentOwner);
+
         return (
-            <div key={list._id} className="glass-panel" style={{ padding: '1.5rem', borderRadius: '14px', transition: 'all 0.3s', backgroundColor: expandedListId === list._id ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.03)' }}>
+            <div key={list._id} className="glass-panel profile-list-card" style={{ padding: '1.5rem', borderRadius: '14px', transition: 'all 0.3s', backgroundColor: expandedListId === list._id ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.03)' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', cursor: 'pointer' }} onClick={() => toggleList(list._id)}>
                     <div style={{ flex: 1, paddingRight: '1rem' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.6rem', flexWrap: 'wrap' }}>
-                            <Link to={ownerLink} onClick={(e) => e.stopPropagation()} style={{ textDecoration: 'none' }}>
-                                <div style={{
-                                    background: 'rgba(212, 175, 55, 0.12)',
-                                    border: '1px solid rgba(212, 175, 55, 0.25)',
-                                    borderRadius: '8px',
-                                    padding: '0.35rem 0.65rem',
-                                    display: 'inline-flex', alignItems: 'center', gap: '0.4rem',
-                                    fontSize: '0.8rem', fontWeight: 700,
-                                    color: 'var(--primary-color)'
-                                }}>
-                                    {ownerPic ? <img src={ownerPic} alt="" style={{ width: '16px', height: '16px', borderRadius: '50%' }} /> : <FaUser style={{ fontSize: '0.7rem' }} />}
-                                    {ownerName}
-                                </div>
-                            </Link>
-                            {reactionBadge}
-                        </div>
+                        {showOwner && (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.6rem', flexWrap: 'wrap' }}>
+                                <Link to={ownerLink} onClick={(e) => e.stopPropagation()} style={{ textDecoration: 'none' }}>
+                                    <div style={{
+                                        background: 'rgba(212, 175, 55, 0.12)',
+                                        border: '1px solid rgba(212, 175, 55, 0.25)',
+                                        borderRadius: '8px',
+                                        padding: '0.35rem 0.65rem',
+                                        display: 'inline-flex', alignItems: 'center', gap: '0.4rem',
+                                        fontSize: '0.8rem', fontWeight: 700,
+                                        color: 'var(--primary-color)'
+                                    }}>
+                                        {ownerPic ? <img src={ownerPic} alt="" style={{ width: '16px', height: '16px', borderRadius: '50%' }} /> : <FaUser style={{ fontSize: '0.7rem' }} />}
+                                        {ownerName}
+                                    </div>
+                                </Link>
+                                {reactionBadge}
+                            </div>
+                        )}
                         <h3 style={{ fontSize: '1.25rem', marginBottom: '0.2rem', color: '#fff' }}>{list.name}</h3>
                         <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>{list.items?.length || 0} içerik</p>
                         {list.description && (
@@ -800,18 +839,13 @@ const Profile = () => {
 
             {/* Edit Review Modal */}
             {editingReview && (
-                <div style={{
-                    position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-                    background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(12px)', zIndex: 1000,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem'
-                }} onClick={() => setEditingReview(null)}>
+                <div className="modal-overlay profile-modal-overlay" onClick={() => setEditingReview(null)}>
                     <form 
                         onSubmit={handleUpdateReview}
-                        className="glass-panel animate-scale-up" 
-                        style={{ padding: '2.5rem', width: '100%', maxWidth: '500px', border: '1px solid rgba(255,255,255,0.15)', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)' }} 
+                        className="modal-content profile-edit-modal glass-panel animate-scale-up" 
                         onClick={e => e.stopPropagation()}
                     >
-                        <h2 style={{ marginBottom: '1.5rem', color: 'var(--primary-color)', textAlign: 'center' }}>İncelemeyi Düzenle</h2>
+                        <h2 className="profile-edit-modal-title">İncelemeyi Düzenle</h2>
                         
                         <div className="form-group" style={{ marginBottom: '1.5rem', textAlign: 'center' }}>
                             <label style={{ display: 'block', marginBottom: '0.5rem' }}>Puanınız</label>
@@ -827,25 +861,17 @@ const Profile = () => {
                                 rows="4"
                                 value={editingReview.reviewText}
                                 onChange={e => setEditingReview({...editingReview, reviewText: e.target.value})}
-                                style={{ 
-                                    width: '100%', 
-                                    padding: '12px 16px', 
-                                    background: 'rgba(255,255,255,0.05)', 
-                                    border: '1px solid rgba(255,255,255,0.1)', 
-                                    borderRadius: '12px', 
-                                    color: '#fff',
-                                    resize: 'none',
-                                    fontSize: '1rem'
-                                }}
+                                className="profile-edit-textarea"
+                                placeholder="Düşüncelerinizi paylaşın..."
                             ></textarea>
                         </div>
 
                         <div style={{ display: 'flex', gap: '1rem' }}>
-                            <button type="submit" className="btn-primary" style={{ flex: 1, padding: '14px', borderRadius: '12px', fontWeight: 700 }} disabled={isSubmitting}>Güncelle</button>
+                            <button type="submit" className="btn-primary" style={{ flex: 1, padding: '12px', borderRadius: '12px', fontWeight: 700 }} disabled={isSubmitting}>Güncelle</button>
                             <button 
                                 type="button" 
                                 className="btn-secondary" 
-                                style={{ flex: 1, padding: '14px', borderRadius: '12px', background: 'rgba(255,255,255,0.1)', color: '#fff', border: 'none' }}
+                                style={{ flex: 1, padding: '12px', borderRadius: '12px', background: 'rgba(255,255,255,0.1)', color: '#fff', border: 'none' }}
                                 onClick={() => setEditingReview(null)}
                             >
                                 Vazgeç
