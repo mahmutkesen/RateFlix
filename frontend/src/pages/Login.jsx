@@ -73,9 +73,6 @@ const Login = () => {
                 <button type="submit" className="auth-btn" disabled={loading}>
                     {loading ? 'Giriş Yapılıyor...' : 'Giriş Yap'}
                 </button>
-                <div style={{ textAlign: 'center', marginTop: '1rem' }}>
-                    <Link to="/forgot-password" style={{ color: 'var(--primary-color)', fontSize: '0.85rem' }}>Şifrenizi mi unuttunuz?</Link>
-                </div>
             </form>
             
             <div className="auth-footer">

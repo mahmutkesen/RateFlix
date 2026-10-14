@@ -9,8 +9,6 @@ const Search = React.lazy(() => import('./pages/Search'));
 const Profile = React.lazy(() => import('./pages/Profile'));
 const Lists = React.lazy(() => import('./pages/Lists'));
 const Community = React.lazy(() => import('./pages/Community'));
-const ForgotPassword = React.lazy(() => import('./pages/ForgotPassword'));
-const ResetPassword = React.lazy(() => import('./pages/ResetPassword'));
 const CategoryPage = React.lazy(() => import('./pages/CategoryPage'));
 const Admin = React.lazy(() => import('./pages/Admin'));
 import { ToastProvider } from './components/Toast';
@@ -19,7 +17,7 @@ import { UserListsProvider } from './context/UserListsContext';
 
 const AppContent = () => {
   const location = useLocation();
-  const isAuthPage = ['/login', '/register', '/forgot-password', '/reset-password'].includes(location.pathname);
+  const isAuthPage = ['/login', '/register'].includes(location.pathname);
 
   return (
     <div className="app">
@@ -38,8 +36,6 @@ const AppContent = () => {
             <Route path="/profile/:userId" element={<Profile />} />
             <Route path="/lists" element={<Lists />} />
             <Route path="/community" element={<Community />} />
-            <Route path="/forgot-password" element={<ForgotPassword />} />
-            <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/admin" element={<Admin />} />
           </Routes>
         </React.Suspense>
