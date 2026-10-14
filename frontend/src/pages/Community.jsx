@@ -357,23 +357,23 @@ const Community = () => {
                     </form>
                 </div>
             )}
-            <header className="hero" style={{ padding: '4rem 0 2rem' }}>
+            <header className="hero" style={{ maxWidth: '820px', margin: '1.2rem auto 2.2rem', padding: '2.8rem 2rem' }}>
                 <h1>Topluluk Merkezi</h1>
                 <p>Diğer RateFlix üyelerinin neler izlediğini keşfedin, incelemeleri okuyun ve listeleri inceleyin.</p>
             </header>
 
             {/* Tab Navigation */}
-            <div style={{ display: 'flex', justifyContent: 'center', gap: '1rem', marginBottom: '2.5rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'center', gap: '0.8rem', marginBottom: '2.5rem', flexWrap: 'wrap' }}>
                 <button
                     onClick={() => setActiveTab('reviews')}
                     style={{
                         background: activeTab === 'reviews' ? 'linear-gradient(135deg, var(--primary-color), #f39c12)' : 'rgba(255,255,255,0.05)',
                         border: '1px solid rgba(255,255,255,0.1)',
-                        padding: '0.8rem 2.5rem',
+                        padding: '0.65rem 1.8rem',
                         borderRadius: '30px',
                         color: activeTab === 'reviews' ? '#000' : 'var(--text-muted)',
-                        fontSize: '1.2rem', fontWeight: 600, cursor: 'pointer',
-                        display: 'flex', alignItems: 'center', gap: '0.8rem', transition: 'all 0.3s',
+                        fontSize: '1rem', fontWeight: 600, cursor: 'pointer',
+                        display: 'flex', alignItems: 'center', gap: '0.6rem', transition: 'all 0.3s',
                         boxShadow: activeTab === 'reviews' ? '0 4px 15px rgba(212, 175, 55, 0.4)' : 'none'
                     }}
                     className="hover-scale"
@@ -385,11 +385,11 @@ const Community = () => {
                     style={{
                         background: activeTab === 'lists' ? 'linear-gradient(135deg, var(--primary-color), #f39c12)' : 'rgba(255,255,255,0.05)',
                         border: '1px solid rgba(255,255,255,0.1)',
-                        padding: '0.8rem 2.5rem',
+                        padding: '0.65rem 1.8rem',
                         borderRadius: '30px',
                         color: activeTab === 'lists' ? '#000' : 'var(--text-muted)',
-                        fontSize: '1.2rem', fontWeight: 600, cursor: 'pointer',
-                        display: 'flex', alignItems: 'center', gap: '0.8rem', transition: 'all 0.3s',
+                        fontSize: '1rem', fontWeight: 600, cursor: 'pointer',
+                        display: 'flex', alignItems: 'center', gap: '0.6rem', transition: 'all 0.3s',
                         boxShadow: activeTab === 'lists' ? '0 4px 15px rgba(212, 175, 55, 0.4)' : 'none'
                     }}
                     className="hover-scale"

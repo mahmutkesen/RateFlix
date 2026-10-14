@@ -220,41 +220,47 @@ const Navbar = () => {
                 
                 {showDropdown && (
                   <div className="dropdown-menu glass-panel animate-fade-in">
-                    <div className="dropdown-section">
-                      <h4>Filmler</h4>
-                      <div className="genre-grid">
-                        {UNIFIED_CATEGORIES.map(cat => (
-                          <Link 
-                            key={cat.id} 
-                            to={`/category/movie?genre=${cat.id}`}
-                            onClick={() => {
-                              setShowDropdown(false);
-                              setIsMobileMenuOpen(false);
-                            }}
-                            className="genre-link"
-                          >
-                            {cat.name}
-                          </Link>
-                        ))}
+                    <div className="dropdown-columns">
+                      <div className="dropdown-section">
+                        <div className="dropdown-section-header">
+                          <span className="dropdown-badge">🎬 Filmler</span>
+                        </div>
+                        <div className="genre-chips-container">
+                          {UNIFIED_CATEGORIES.map(cat => (
+                            <Link 
+                              key={`movie-${cat.id}`} 
+                              to={`/category/movie?genre=${cat.id}`}
+                              onClick={() => {
+                                setShowDropdown(false);
+                                setIsMobileMenuOpen(false);
+                              }}
+                              className="genre-chip"
+                            >
+                              {cat.name}
+                            </Link>
+                          ))}
+                        </div>
                       </div>
-                    </div>
-                    <div className="dropdown-divider"></div>
-                    <div className="dropdown-section">
-                      <h4>Diziler</h4>
-                      <div className="genre-grid">
-                        {UNIFIED_CATEGORIES.map(cat => (
-                          <Link 
-                            key={cat.id} 
-                            to={`/category/tv?genre=${cat.id}`}
-                            onClick={() => {
-                              setShowDropdown(false);
-                              setIsMobileMenuOpen(false);
-                            }}
-                            className="genre-link"
-                          >
-                            {cat.name}
-                          </Link>
-                        ))}
+
+                      <div className="dropdown-section">
+                        <div className="dropdown-section-header">
+                          <span className="dropdown-badge">📺 Diziler</span>
+                        </div>
+                        <div className="genre-chips-container">
+                          {UNIFIED_CATEGORIES.map(cat => (
+                            <Link 
+                              key={`tv-${cat.id}`} 
+                              to={`/category/tv?genre=${cat.id}`}
+                              onClick={() => {
+                                setShowDropdown(false);
+                                setIsMobileMenuOpen(false);
+                              }}
+                              className="genre-chip"
+                            >
+                              {cat.name}
+                            </Link>
+                          ))}
+                        </div>
                       </div>
                     </div>
                   </div>

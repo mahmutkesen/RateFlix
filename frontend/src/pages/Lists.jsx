@@ -114,41 +114,38 @@ const Lists = () => {
 
     return (
         <>
-        <div style={{ paddingTop: '90px', paddingBottom: '4rem', minHeight: '100vh' }}>
+        <div className="animate-fade-in" style={{ paddingBottom: '4rem', minHeight: '80vh' }}>
             {/* Header */}
-            <div style={{
-                background: 'radial-gradient(ellipse at top, rgba(212,175,55,0.12) 0%, transparent 60%)',
-                borderBottom: '1px solid rgba(212,175,55,0.1)',
-                padding: '3rem 0 2.5rem',
-                marginBottom: '3rem',
+            <header className="hero" style={{
+                maxWidth: '820px',
+                margin: '1.2rem auto 2.5rem',
+                padding: '2.8rem 2rem',
                 textAlign: 'center'
             }}>
-                <div className="container">
-                    <h1 style={{
-                        fontSize: '2.8rem',
-                        fontWeight: 800,
-                        background: 'linear-gradient(135deg, #d4af37 0%, #f39c12 100%)',
-                        WebkitBackgroundClip: 'text',
-                        WebkitTextFillColor: 'transparent',
-                        letterSpacing: '-1px',
-                        marginBottom: '0.5rem'
-                    }}>
-                        Listelerim
-                    </h1>
-                    <p style={{ color: 'var(--text-muted)', marginBottom: '2rem' }}>
-                        Favori film ve dizilerinizi düzenleyin
-                    </p>
-                    <button
-                        onClick={() => setShowForm(!showForm)}
-                        className="btn-primary"
-                        style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}
-                    >
-                        <FaPlus /> {showForm ? 'İptal' : 'Yeni Liste Oluştur'}
-                    </button>
-                </div>
-            </div>
+                <h1 style={{
+                    fontSize: '2.6rem',
+                    fontWeight: 800,
+                    background: 'linear-gradient(135deg, #d4af37 0%, #f39c12 100%)',
+                    WebkitBackgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent',
+                    letterSpacing: '-1px',
+                    marginBottom: '0.6rem'
+                }}>
+                    Listelerim
+                </h1>
+                <p style={{ color: 'var(--text-muted)', fontSize: '1.05rem', marginBottom: '1.8rem' }}>
+                    Favori film ve dizilerinizi düzenleyin
+                </p>
+                <button
+                    onClick={() => setShowForm(!showForm)}
+                    className="btn-primary"
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', padding: '0.7rem 1.6rem', fontSize: '0.95rem' }}
+                >
+                    <FaPlus /> {showForm ? 'İptal' : 'Yeni Liste Oluştur'}
+                </button>
+            </header>
 
-            <div className="container">
+            <div className="container" style={{ padding: 0 }}>
                 {/* Create List Form */}
                 {showForm && (
                     <form
