@@ -1,6 +1,8 @@
 const List = require('../models/List');
 const Comment = require('../models/Comment');
 const { publishNotification } = require('../utils/rabbitClient');
+const { fetchListFeed } = require('../utils/communityFeed');
+const { parsePaging } = require('../utils/searchUtils');
 
 let memLists = []; // Memory mock
 
@@ -9,30 +11,22 @@ exports.getAllPublicLists = async (req, res) => {
         if (process.env.USE_MEMORY_DB === 'true') {
             return res.json(memLists.filter(l => l.isPublic !== false).slice(0, 50));
         }
-        const lists = await List.find({ 
-            isPublic: true,
-            "items.0": { $exists: true } 
-        }).sort({ createdAt: -1 }).limit(50).populate('user', 'username profilePic');
-        
-        const listIds = lists.map(l => l._id);
-        const counts = await Comment.aggregate([
-            { $match: { targetId: { $in: listIds.map(id => id.toString()) }, targetType: 'list' } },
-            { $group: { _id: "$targetId", count: { $sum: 1 } } }
-        ]);
-        const countsMap = counts.reduce((acc, curr) => {
-            acc[curr._id] = curr.count;
-            return acc;
-        }, {});
+        const { limit, skip } = parsePaging(req.query, 50, 100);
+        const q = typeof req.query.q === 'string' ? req.query.q : '';
+        const sort = typeof req.query.sort === 'string' ? req.query.sort : 'newest';
 
-        const listsWithCounts = lists.map((l) => {
-            let listObj = l.toObject();
-            if (!listObj.user) {
-                listObj.user = { _id: l.toObject().user, username: 'Silinmiş Kullanıcı', profilePic: '' };
-            }
-            return { ...listObj, commentCount: countsMap[l._id.toString()] || 0 };
+        const lists = await fetchListFeed({
+            match: { isPublic: true, 'items.0': { $exists: true } },
+            q,
+            sort,
+            skip,
+            limit
         });
-        res.json(listsWithCounts);
-    } catch (err) { res.status(500).send('Server Error'); }
+        res.json(lists);
+    } catch (err) {
+        console.error('getAllPublicLists error:', err);
+        res.status(500).json({ message: 'Sunucu hatası' });
+    }
 };
 
 exports.getUserLists = async (req, res) => {
@@ -122,10 +116,13 @@ exports.createList = async (req, res) => {
 
 exports.addItemToList = async (req, res) => {
     try {
-        const { tmdbId, mediaType, posterPath } = req.body;
+        const { tmdbId, mediaType, posterPath, title } = req.body;
         if (!tmdbId) {
             return res.status(400).json({ message: 'İçerik kimliği gereklidir' });
         }
+        const safeMediaType = ['movie', 'tv'].includes(mediaType) ? mediaType : 'movie';
+        const safePosterPath = typeof posterPath === 'string' ? posterPath.trim().slice(0, 300) : '';
+        const safeTitle = typeof title === 'string' ? title.trim().slice(0, 200) : '';
 
         const mongoose = require('mongoose');
         if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
@@ -145,7 +142,7 @@ exports.addItemToList = async (req, res) => {
         if (!list) return res.status(404).json({ message: 'Liste bulunamadı' });
         if (list.user.toString() !== req.user.id) return res.status(403).json({ message: 'Yetkisiz işlem' });
         if (list.items.some(item => String(item.tmdbId) === String(tmdbId))) return res.status(400).json({ message: 'İçerik zaten listede' });
-        list.items.unshift({ tmdbId: String(tmdbId), mediaType, posterPath });
+        list.items.unshift({ tmdbId: String(tmdbId), mediaType: safeMediaType, posterPath: safePosterPath, title: safeTitle });
         await list.save();
 
         publishNotification({
@@ -209,6 +206,7 @@ exports.deleteList = async (req, res) => {
         if (list.user.toString() !== req.user.id && req.user.role !== 'admin') return res.status(403).json({ message: 'Yetkisiz işlem' });
         if (['favorites', 'watchlist', 'watched'].includes(list.type)) return res.status(400).json({ message: 'Varsayılan listeler silinemez' });
         await list.deleteOne();
+        await Comment.deleteMany({ targetId: list._id, targetType: 'list' });
         res.json({ message: 'Liste silindi' });
     } catch (err) {
         console.error('deleteList error:', err);

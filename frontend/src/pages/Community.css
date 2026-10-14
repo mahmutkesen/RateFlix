@@ -268,14 +268,240 @@
     }
 
     /* Tabs Mobile Fix */
-    .community-page div[style*="display: flex"][style*="justify-content: center"] {
-        flex-direction: column;
+    .community-tabs-container {
+        flex-direction: column !important;
         gap: 0.8rem !important;
     }
 
-    .community-page div[style*="display: flex"][style*="justify-content: center"] button {
+    .community-tabs-container button {
         width: 100%;
         padding: 0.6rem 1.5rem !important;
         font-size: 1rem !important;
     }
+
+    .community-controls-bar {
+        flex-direction: column !important;
+        align-items: stretch !important;
+    }
+
+    .community-sort-group {
+        overflow-x: auto;
+        padding-bottom: 6px;
+    }
 }
+
+/* ==========================================================================
+   Community Search & Filter Controls
+   ========================================================================== */
+.community-controls-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+}
+
+.community-search-box {
+    position: relative;
+    flex: 1;
+    min-width: 260px;
+}
+
+.community-search-box input {
+    width: 100%;
+    padding: 12px 42px 12px 44px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 30px;
+    color: #fff;
+    font-size: 0.95rem;
+    outline: none;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+}
+
+.community-search-box input:focus {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: var(--primary-color);
+    box-shadow: 0 0 15px rgba(212, 175, 55, 0.25);
+}
+
+.community-search-box .search-icon {
+    position: absolute;
+    left: 16px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-muted);
+    font-size: 0.95rem;
+    pointer-events: none;
+}
+
+.community-search-box .clear-btn {
+    position: absolute;
+    right: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 0.85rem;
+    padding: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: all 0.2s;
+}
+
+.community-search-box .clear-btn:hover {
+    color: #fff;
+    background: rgba(255, 255, 255, 0.1);
+}
+
+/* Sort options group */
+.community-sort-group {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    flex-wrap: wrap;
+}
+
+.sort-pill-btn {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.09);
+    color: var(--text-muted);
+    padding: 7px 14px;
+    border-radius: 20px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.25s ease;
+    white-space: nowrap;
+}
+
+.sort-pill-btn:hover {
+    background: rgba(255, 255, 255, 0.09);
+    color: #fff;
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+.sort-pill-btn.active {
+    background: linear-gradient(135deg, rgba(212, 175, 55, 0.2), rgba(243, 156, 18, 0.25));
+    border-color: var(--primary-color);
+    color: var(--primary-color);
+    box-shadow: 0 2px 10px rgba(212, 175, 55, 0.2);
+}
+
+/* Sub-tabs for Friend Activity */
+.friend-subtabs-bar {
+    display: flex;
+    justify-content: center;
+    gap: 0.6rem;
+    margin-bottom: 1.8rem;
+    flex-wrap: wrap;
+}
+
+.friend-subtab-btn {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.09);
+    color: var(--text-muted);
+    padding: 8px 18px;
+    border-radius: 25px;
+    font-size: 0.88rem;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.25s ease;
+}
+
+.friend-subtab-btn:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: #fff;
+}
+
+.friend-subtab-btn.active {
+    background: linear-gradient(135deg, var(--primary-color), #f39c12);
+    border-color: transparent;
+    color: #000;
+    font-weight: 700;
+    box-shadow: 0 4px 15px rgba(212, 175, 55, 0.35);
+}
+
+/* Friend Liked By Banner */
+.friend-liked-banner {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 14px;
+    background: rgba(235, 77, 75, 0.12);
+    border: 1px solid rgba(235, 77, 75, 0.25);
+    border-radius: 10px;
+    margin-bottom: 1rem;
+    font-size: 0.85rem;
+    color: #ff7675;
+}
+
+.friend-liked-banner .friend-avatar-stack {
+    display: flex;
+    align-items: center;
+}
+
+.friend-liked-banner .friend-avatar-stack img,
+.friend-liked-banner .friend-avatar-stack .avatar-fallback {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    border: 2px solid #1a1a24;
+    object-fit: cover;
+    margin-left: -6px;
+}
+
+.friend-liked-banner .friend-avatar-stack img:first-child,
+.friend-liked-banner .friend-avatar-stack .avatar-fallback:first-child {
+    margin-left: 0;
+}
+
+.friend-liked-banner .friend-names {
+    font-weight: 600;
+    color: #fff;
+}
+
+/* Comment target badge */
+.target-reference-card {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 12px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    border-radius: 8px;
+    margin-bottom: 0.8rem;
+    text-decoration: none;
+    color: inherit;
+    transition: all 0.2s;
+}
+
+.target-reference-card:hover {
+    background: rgba(255, 255, 255, 0.06);
+    border-color: rgba(212, 175, 55, 0.3);
+}
+
+.target-reference-thumb {
+    width: 36px;
+    height: 50px;
+    border-radius: 4px;
+    object-fit: cover;
+    background: rgba(255, 255, 255, 0.05);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+

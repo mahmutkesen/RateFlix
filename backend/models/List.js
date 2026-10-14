@@ -36,6 +36,10 @@ const ListSchema = new mongoose.Schema({
         posterPath: {
             type: String
         },
+        title: {
+            type: String,
+            default: ''
+        },
         addedAt: {
             type: Date,
             default: Date.now

@@ -48,7 +48,8 @@ const MovieCard = React.memo(({ item, type }) => {
             await api.post(`/lists/${listId}/items`, {
                 tmdbId: item.id,
                 mediaType: type || item.media_type || 'movie',
-                posterPath: item.poster_path
+                posterPath: item.poster_path,
+                title: item.title || item.name || ''
             });
             showToast(`"${item.title || item.name}" başarıyla "${listName}" listesine eklendi!`, 'success');
             setShowListMenu(false);

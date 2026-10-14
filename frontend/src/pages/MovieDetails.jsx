@@ -113,7 +113,8 @@ const MovieDetails = ({ type }) => {
             await api.post(`/lists/${listId}/items`, {
                 tmdbId: id,
                 mediaType: type,
-                posterPath: details.poster_path
+                posterPath: details.poster_path,
+                title: details.title || details.name || ''
             });
             showToast(`${listName} listesine eklendi!`, 'success');
             setShowListMenu(false);

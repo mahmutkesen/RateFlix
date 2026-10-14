@@ -1,5 +1,7 @@
 const Review = require('../models/Review');
 const Comment = require('../models/Comment');
+const { fetchReviewFeed } = require('../utils/communityFeed');
+const { parsePaging } = require('../utils/searchUtils');
 
 let memReviews = [
     // Mock reviews for popular items so bubbles show up
@@ -88,29 +90,15 @@ exports.getAllReviews = async (req, res) => {
         if (process.env.USE_MEMORY_DB === 'true') {
             return res.json([...memReviews].reverse().slice(0, 50));
         }
-        const reviews = await Review.find({}).sort({ createdAt: -1 }).limit(50).populate('user', 'username profilePic');
-        
-        // Batch fetch comment counts for all these reviews
-        const reviewIds = reviews.map(r => r._id);
-        const counts = await Comment.aggregate([
-            { $match: { targetId: { $in: reviewIds.map(id => id.toString()) }, targetType: 'review' } },
-            { $group: { _id: "$targetId", count: { $sum: 1 } } }
-        ]);
-        const countsMap = counts.reduce((acc, curr) => {
-            acc[curr._id] = curr.count;
-            return acc;
-        }, {});
+        const { limit, skip } = parsePaging(req.query, 50, 100);
+        const q = typeof req.query.q === 'string' ? req.query.q : '';
+        const sort = typeof req.query.sort === 'string' ? req.query.sort : 'newest';
 
-        const reviewsWithCounts = reviews.map((r) => {
-            let reviewObj = r.toObject();
-            if (!reviewObj.user) {
-                reviewObj.user = { _id: r.toObject().user, username: 'Silinmiş Kullanıcı', profilePic: '' };
-            }
-            return { ...reviewObj, commentCount: countsMap[r._id.toString()] || 0 };
-        });
-        res.json(reviewsWithCounts);
+        const reviews = await fetchReviewFeed({ q, sort, skip, limit });
+        res.json(reviews);
     } catch (err) {
-        res.status(500).send('Server Error');
+        console.error('getAllReviews error:', err);
+        res.status(500).json({ message: 'Sunucu hatası' });
     }
 };
 
@@ -225,6 +213,7 @@ exports.deleteReview = async (req, res) => {
         }
         
         await review.deleteOne();
+        await Comment.deleteMany({ targetId: review._id, targetType: 'review' });
         // Invalidate cache
         topRatedCache = { movie: { data: null, timestamp: 0 }, tv: { data: null, timestamp: 0 }, all: { data: null, timestamp: 0 } };
         res.json({ message: 'Değerlendirme silindi' });
