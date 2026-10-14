@@ -13,7 +13,8 @@ import {
 import './Profile.css';
 
 const Profile = () => {
-    const { username } = useParams();
+    const { userId, username } = useParams();
+    const profileIdentifier = userId || username;
     const [profileData, setProfileData] = useState(null);
     const [loading, setLoading] = useState(true);
     const [myUser, setMyUser] = useState(JSON.parse(localStorage.getItem('user') || 'null'));
@@ -47,7 +48,10 @@ const Profile = () => {
     const fetchProfile = async () => {
         setLoading(true);
         try {
-            const targetId = username || myUser?.username || myUser?.id;
+            const currentStoredUser = JSON.parse(localStorage.getItem('user') || 'null');
+            setMyUser(currentStoredUser);
+
+            const targetId = profileIdentifier || currentStoredUser?.username || currentStoredUser?.id || currentStoredUser?._id;
             if (!targetId) {
                 setLoading(false);
                 return;
@@ -56,9 +60,19 @@ const Profile = () => {
             setProfileData(res.data);
             setFollowersCount(res.data.user.followers?.length || 0);
 
-            if (myUser && res.data.user.followers) {
-                const following = res.data.user.followers.some(f => (f._id || f) === myUser.id);
+            if (currentStoredUser && res.data.user.followers) {
+                const myIdStr = (currentStoredUser.id || currentStoredUser._id)?.toString();
+                const myUsername = currentStoredUser.username?.toLowerCase();
+                const following = res.data.user.followers.some(f => {
+                    if (!f) return false;
+                    if (typeof f === 'string') return f === myIdStr;
+                    const fId = (f._id || f.id)?.toString();
+                    const fUname = f.username?.toLowerCase();
+                    return (myIdStr && fId === myIdStr) || (myUsername && fUname === myUsername);
+                });
                 setIsFollowing(following);
+            } else {
+                setIsFollowing(false);
             }
 
             // Also fetch user reactions
@@ -71,10 +85,10 @@ const Profile = () => {
         }
     };
 
-    const fetchReactions = async (userId) => {
+    const fetchReactions = async (userIdToFetch) => {
         setLoadingReactions(true);
         try {
-            const res = await api.get(`/users/${userId}/reactions`);
+            const res = await api.get(`/users/${userIdToFetch}/reactions`);
             if (res.data) {
                 setReactionsData({
                     likedReviews: res.data.likedReviews || [],
@@ -93,16 +107,26 @@ const Profile = () => {
     };
 
     useEffect(() => {
+        setShowFollowers(false);
+        setShowFollowing(false);
+        setActiveTab('reviews');
         fetchProfile();
-    }, [username]);
+    }, [profileIdentifier]);
 
     const handleFollow = async () => {
         if (!myUser) return showToast('Takip etmek için giriş yapmalısınız.', 'error');
         try {
-            const res = await api.post(`/auth/follow/${profileData.user._id}`);
-            setIsFollowing(res.data.isFollowing);
-            setFollowersCount(prev => res.data.isFollowing ? prev + 1 : prev - 1);
-            showToast(res.data.isFollowing ? 'Takip edildi.' : 'Takipten çıkıldı.', 'success');
+            if (isFollowing) {
+                await api.post(`/auth/unfollow/${profileData.user._id}`);
+                setIsFollowing(false);
+                setFollowersCount(prev => Math.max(0, prev - 1));
+                showToast('Takipten çıkıldı.', 'success');
+            } else {
+                await api.post(`/auth/follow/${profileData.user._id}`);
+                setIsFollowing(true);
+                setFollowersCount(prev => prev + 1);
+                showToast('Takip edildi.', 'success');
+            }
         } catch (err) {
             showToast('İşlem başarısız.', 'error');
         }
@@ -187,7 +211,11 @@ const Profile = () => {
     );
 
     const { user, lists = [], reviews = [] } = profileData;
-    const isMyProfile = myUser && (myUser.id === user._id.toString());
+    const isMyProfile = Boolean(myUser && user && (
+        (myUser.id && user._id && myUser.id.toString() === user._id.toString()) ||
+        (myUser._id && user._id && myUser._id.toString() === user._id.toString()) ||
+        (myUser.username && user.username && myUser.username.toLowerCase() === user.username.toLowerCase())
+    ));
 
     // Reaction counts
     const likedReviews = reactionsData.likedReviews || [];
