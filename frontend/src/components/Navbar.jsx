@@ -1,6 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { FaUser, FaSignOutAlt, FaVideo, FaChevronDown, FaSearch, FaUserFriends, FaBars, FaTimes } from 'react-icons/fa';
+import { 
+  FaUser, FaSignOutAlt, FaVideo, FaChevronDown, FaSearch, 
+  FaUsers, FaBars, FaTimes, FaFilm, FaList, FaCrown 
+} from 'react-icons/fa';
 import { searchMulti, getImageUrl, UNIFIED_CATEGORIES } from '../services/tmdb';
 import api from '../services/api';
 import './Navbar.css';
@@ -9,6 +12,7 @@ const Navbar = () => {
   const navigate = useNavigate();
   const dropdownRef = useRef(null);
   const searchRef = useRef(null);
+  const hamburgerRef = useRef(null);
   const token = localStorage.getItem('token');
   const user = JSON.parse(localStorage.getItem('user') || 'null');
   
@@ -17,7 +21,7 @@ const Navbar = () => {
   const [movieSuggestions, setMovieSuggestions] = useState([]);
   const [userSuggestions, setUserSuggestions] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -26,6 +30,9 @@ const Navbar = () => {
       }
       if (searchRef.current && !searchRef.current.contains(event.target)) {
         setShowSuggestions(false);
+      }
+      if (hamburgerRef.current && !hamburgerRef.current.contains(event.target)) {
+        setIsMenuOpen(false);
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
@@ -82,7 +89,7 @@ const Navbar = () => {
     navigate(`/${item.media_type}/${item.id}`);
     setShowSuggestions(false);
     setSearchQuery('');
-    setIsMobileMenuOpen(false); // Close mobile menu too
+    setIsMenuOpen(false);
   };
 
   const renderSuggestions = () => {
@@ -103,7 +110,7 @@ const Navbar = () => {
                   navigate(`/${item.media_type}/${item.id}`);
                   setShowSuggestions(false);
                   setSearchQuery('');
-                  setIsMobileMenuOpen(false);
+                  setIsMenuOpen(false);
                 }}
               >
                 <img 
@@ -135,7 +142,7 @@ const Navbar = () => {
                   navigate(`/profile/${userItem.username}`);
                   setShowSuggestions(false);
                   setSearchQuery('');
-                  setIsMobileMenuOpen(false);
+                  setIsMenuOpen(false);
                 }}
               >
                 <div className="user-suggestion-avatar">
@@ -160,6 +167,7 @@ const Navbar = () => {
   return (
     <nav className="navbar glass-panel">
       <div className="container nav-content">
+        {/* Brand Logo */}
         <Link to="/" className="brand">
           <div className="brand-logo">
              <FaVideo className="brand-icon" />
@@ -167,127 +175,205 @@ const Navbar = () => {
           <span className="brand-text">Rate<span className="brand-highlight">Flix</span></span>
         </Link>
 
-        {/* Search Bar - Now on the left side of nav items */}
-        {/* Search Bar - Hidden on very small screens, shown in mobile menu instead */}
-        <div className="nav-search-container desktop-search" ref={searchRef}>
+        {/* Integrated Search Bar + Categories Dropdown */}
+        <div className="nav-search-wrapper" ref={searchRef}>
           <form className="nav-search" onSubmit={handleSearchSubmit}>
-              <FaSearch className="search-icon-min" />
-                <input 
-                  type="text" 
-                  placeholder="Film, dizi, kullanıcı ara..." 
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  onFocus={() => searchQuery.length > 1 && setShowSuggestions(true)}
-                />
+            <FaSearch className="search-icon-min" />
+            <input 
+              type="text" 
+              placeholder="Film, dizi, kullanıcı ara..." 
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onFocus={() => searchQuery.length > 1 && setShowSuggestions(true)}
+            />
           </form>
+
+          {/* Categories Dropdown right next to search */}
+          <div className="nav-category-dropdown" ref={dropdownRef}>
+            <button 
+              type="button"
+              className={`category-trigger-btn ${showDropdown ? 'active' : ''}`}
+              onClick={() => setShowDropdown(!showDropdown)}
+              title="Kategorileri Keşfet"
+            >
+              <FaFilm className="category-trigger-icon" />
+              <span className="category-trigger-text">Kategoriler</span>
+              <FaChevronDown className="dropdown-chevron" />
+            </button>
+            
+            {showDropdown && (
+              <div className="dropdown-menu glass-panel animate-fade-in">
+                <div className="dropdown-columns">
+                  <div className="dropdown-section">
+                    <div className="dropdown-section-header">
+                      <span className="dropdown-badge">🎬 Filmler</span>
+                    </div>
+                    <div className="genre-chips-container">
+                      {UNIFIED_CATEGORIES.map(cat => (
+                        <Link 
+                          key={`movie-${cat.id}`} 
+                          to={`/category/movie?genre=${cat.id}`}
+                          onClick={() => setShowDropdown(false)}
+                          className="genre-chip"
+                        >
+                          {cat.name}
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="dropdown-section">
+                    <div className="dropdown-section-header">
+                      <span className="dropdown-badge">📺 Diziler</span>
+                    </div>
+                    <div className="genre-chips-container">
+                      {UNIFIED_CATEGORIES.map(cat => (
+                        <Link 
+                          key={`tv-${cat.id}`} 
+                          to={`/category/tv?genre=${cat.id}`}
+                          onClick={() => setShowDropdown(false)}
+                          className="genre-chip"
+                        >
+                          {cat.name}
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
           {showSuggestions && searchQuery && renderSuggestions()}
         </div>
 
+        {/* Right Navigation Actions: Keşfet + Topluluk (Özel Buton) + Hamburger Menü */}
+        <div className="nav-right-actions">
+          <Link to="/" className="nav-item nav-explore-link">Keşfet</Link>
 
-        {/* Mobile Toggle */}
-        <button 
-          className="mobile-menu-toggle"
-          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-        >
-          {isMobileMenuOpen ? <FaTimes /> : <FaBars />}
-        </button>
+          {/* Distinctive Community Button */}
+          <Link to="/community" className="nav-community-btn">
+            <FaUsers className="community-btn-icon" />
+            <span>Topluluk</span>
+          </Link>
 
-        <div className={`nav-links ${isMobileMenuOpen ? 'mobile-active' : ''}`}>
-            {/* Mobile Search Bar */}
-            <div className="nav-search-container mobile-only-search">
-              <form className="nav-search" onSubmit={handleSearchSubmit}>
-                <FaSearch className="search-icon-min" />
-                <input 
-                  type="text" 
-                  placeholder="Film, dizi, kullanıcı ara..." 
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  onFocus={() => searchQuery.length > 1 && setShowSuggestions(true)}
-                />
-              </form>
-              {showSuggestions && searchQuery && renderSuggestions()}
-            </div>
+          {/* Hamburger Menu Container (Profil, Listeler, Admin, Çıkış) */}
+          <div className="hamburger-container" ref={hamburgerRef}>
+            <button 
+              type="button"
+              className={`hamburger-toggle-btn ${isMenuOpen ? 'active' : ''}`}
+              onClick={() => setIsMenuOpen(!isMenuOpen)}
+              aria-label="Kullanıcı Menüsü"
+              title="Menü"
+            >
+              {token && user ? (
+                <div className="hamburger-user-preview">
+                  <div className="hamburger-avatar-mini">
+                    {user.profilePic ? (
+                      <img src={user.profilePic} alt={user.username} />
+                    ) : (
+                      user.username.charAt(0).toUpperCase()
+                    )}
+                  </div>
+                  {isMenuOpen ? <FaTimes className="hamburger-bars-icon" /> : <FaBars className="hamburger-bars-icon" />}
+                </div>
+              ) : (
+                isMenuOpen ? <FaTimes className="hamburger-bars-icon" /> : <FaBars className="hamburger-bars-icon" />
+              )}
+            </button>
 
-            <Link to="/" className="nav-item" onClick={() => setIsMobileMenuOpen(false)}>Keşfet</Link>
-            
-            <div className="dropdown" ref={dropdownRef}>
-                <button 
-                  className={`nav-item dropdown-btn ${showDropdown ? 'active' : ''}`}
-                  onClick={() => setShowDropdown(!showDropdown)}
-                >
-                  Kategoriler <FaChevronDown className="dropdown-chevron" />
-                </button>
-                
-                {showDropdown && (
-                  <div className="dropdown-menu glass-panel animate-fade-in">
-                    <div className="dropdown-columns">
-                      <div className="dropdown-section">
-                        <div className="dropdown-section-header">
-                          <span className="dropdown-badge">🎬 Filmler</span>
-                        </div>
-                        <div className="genre-chips-container">
-                          {UNIFIED_CATEGORIES.map(cat => (
-                            <Link 
-                              key={`movie-${cat.id}`} 
-                              to={`/category/movie?genre=${cat.id}`}
-                              onClick={() => {
-                                setShowDropdown(false);
-                                setIsMobileMenuOpen(false);
-                              }}
-                              className="genre-chip"
-                            >
-                              {cat.name}
-                            </Link>
-                          ))}
-                        </div>
+            {/* Hamburger Dropdown Drawer */}
+            {isMenuOpen && (
+              <div className="hamburger-menu-dropdown glass-panel animate-scale-up">
+                {token && user ? (
+                  <>
+                    {/* User Summary Header */}
+                    <Link 
+                      to="/profile" 
+                      className="hamburger-user-header"
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      <div className="hamburger-avatar-large">
+                        {user.profilePic ? (
+                          <img src={user.profilePic} alt={user.username} />
+                        ) : (
+                          user.username.charAt(0).toUpperCase()
+                        )}
                       </div>
-
-                      <div className="dropdown-section">
-                        <div className="dropdown-section-header">
-                          <span className="dropdown-badge">📺 Diziler</span>
-                        </div>
-                        <div className="genre-chips-container">
-                          {UNIFIED_CATEGORIES.map(cat => (
-                            <Link 
-                              key={`tv-${cat.id}`} 
-                              to={`/category/tv?genre=${cat.id}`}
-                              onClick={() => {
-                                setShowDropdown(false);
-                                setIsMobileMenuOpen(false);
-                              }}
-                              className="genre-chip"
-                            >
-                              {cat.name}
-                            </Link>
-                          ))}
-                        </div>
+                      <div className="hamburger-user-info">
+                        <span className="hamburger-user-name">{user.username}</span>
+                        <span className="hamburger-user-badge">
+                          {user.role === 'admin' ? '👑 Yönetici' : '⭐ Üye'}
+                        </span>
                       </div>
+                    </Link>
+
+                    <div className="hamburger-menu-divider" />
+
+                    <div className="hamburger-links-group">
+                      {/* Mobile-only shortcuts */}
+                      <Link to="/" className="hamburger-menu-item mobile-shortcut" onClick={() => setIsMenuOpen(false)}>
+                        <FaFilm className="menu-item-icon" />
+                        <span>Keşfet</span>
+                      </Link>
+                      <Link to="/community" className="hamburger-menu-item mobile-shortcut" onClick={() => setIsMenuOpen(false)}>
+                        <FaUsers className="menu-item-icon" />
+                        <span>Topluluk</span>
+                      </Link>
+
+                      <Link to="/profile" className="hamburger-menu-item" onClick={() => setIsMenuOpen(false)}>
+                        <FaUser className="menu-item-icon" />
+                        <span>Profilim</span>
+                      </Link>
+
+                      <Link to="/lists" className="hamburger-menu-item" onClick={() => setIsMenuOpen(false)}>
+                        <FaList className="menu-item-icon" />
+                        <span>Listelerim</span>
+                      </Link>
+
+                      {user.role === 'admin' && (
+                        <Link to="/admin" className="hamburger-menu-item admin-item" onClick={() => setIsMenuOpen(false)}>
+                          <FaCrown className="menu-item-icon admin-icon" />
+                          <span>Admin Paneli</span>
+                        </Link>
+                      )}
                     </div>
+
+                    <div className="hamburger-menu-divider" />
+
+                    <button 
+                      onClick={() => { handleLogout(); setIsMenuOpen(false); }}
+                      className="hamburger-logout-btn"
+                    >
+                      <FaSignOutAlt className="menu-item-icon" />
+                      <span>Çıkış Yap</span>
+                    </button>
+                  </>
+                ) : (
+                  <div className="hamburger-guest-group">
+                    {/* Mobile-only shortcuts */}
+                    <Link to="/" className="hamburger-menu-item mobile-shortcut" onClick={() => setIsMenuOpen(false)}>
+                      <FaFilm className="menu-item-icon" />
+                      <span>Keşfet</span>
+                    </Link>
+                    <Link to="/community" className="hamburger-menu-item mobile-shortcut" onClick={() => setIsMenuOpen(false)}>
+                      <FaUsers className="menu-item-icon" />
+                      <span>Topluluk</span>
+                    </Link>
+                    <div className="hamburger-menu-divider mobile-shortcut" />
+
+                    <Link to="/login" className="hamburger-menu-item" onClick={() => setIsMenuOpen(false)}>
+                      <FaUser className="menu-item-icon" />
+                      <span>Giriş Yap</span>
+                    </Link>
+                    <Link to="/register" className="hamburger-register-btn" onClick={() => setIsMenuOpen(false)}>
+                      <span>Kayıt Ol</span>
+                    </Link>
                   </div>
                 )}
-            </div>
-
-            <Link to="/community" className="nav-item" onClick={() => setIsMobileMenuOpen(false)}>Topluluk</Link>
-            
-          {token ? (
-             <div className="auth-nav">
-               {user?.role === 'admin' && (
-                  <Link to="/admin" className="nav-item admin-link" style={{ color: '#d4af37', fontWeight: 'bold' }} onClick={() => setIsMobileMenuOpen(false)}>Admin Paneli</Link>
-               )}
-               <Link to="/lists" className="nav-item" onClick={() => setIsMobileMenuOpen(false)}>Listeler</Link>
-               <Link to="/profile" className="nav-item user-profile" onClick={() => setIsMobileMenuOpen(false)}>
-                 <FaUser /> {user?.username}
-               </Link>
-               <button onClick={() => { handleLogout(); setIsMobileMenuOpen(false); }} className="btn-logout">
-                 <FaSignOutAlt />
-               </button>
-             </div>
-          ) : (
-             <div className="auth-nav">
-                <Link to="/login" className="nav-item" onClick={() => setIsMobileMenuOpen(false)}>Giriş Yap</Link>
-                <Link to="/register" className="btn-primary" onClick={() => setIsMobileMenuOpen(false)}>Kayıt Ol</Link>
-             </div>
-          )}
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </nav>
