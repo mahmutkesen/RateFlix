@@ -174,7 +174,7 @@ const Navbar = () => {
               <FaSearch className="search-icon-min" />
                 <input 
                   type="text" 
-                  placeholder="Film, dizi ara..." 
+                  placeholder="Film, dizi, kullanıcı ara..." 
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   onFocus={() => searchQuery.length > 1 && setShowSuggestions(true)}
@@ -199,7 +199,7 @@ const Navbar = () => {
                 <FaSearch className="search-icon-min" />
                 <input 
                   type="text" 
-                  placeholder="Film, dizi ara..." 
+                  placeholder="Film, dizi, kullanıcı ara..." 
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   onFocus={() => searchQuery.length > 1 && setShowSuggestions(true)}

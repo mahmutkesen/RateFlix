@@ -142,7 +142,22 @@ exports.addItemToList = async (req, res) => {
         if (!list) return res.status(404).json({ message: 'Liste bulunamadı' });
         if (list.user.toString() !== req.user.id) return res.status(403).json({ message: 'Yetkisiz işlem' });
         if (list.items.some(item => String(item.tmdbId) === String(tmdbId))) return res.status(400).json({ message: 'İçerik zaten listede' });
-        list.items.unshift({ tmdbId: String(tmdbId), mediaType: safeMediaType, posterPath: safePosterPath, title: safeTitle });
+
+        let resolvedTitle = safeTitle;
+        if (!resolvedTitle) {
+            try {
+                const axios = require('axios');
+                const tmdbRes = await axios.get(`https://api.themoviedb.org/3/${safeMediaType}/${tmdbId}`, {
+                    params: { api_key: process.env.TMDB_API_KEY || '4e44d9029b1270a757cddc766a1bcb63', language: 'tr-TR' },
+                    timeout: 3000
+                });
+                resolvedTitle = tmdbRes.data.title || tmdbRes.data.name || '';
+            } catch (e) {
+                // Ignore TMDB error
+            }
+        }
+
+        list.items.unshift({ tmdbId: String(tmdbId), mediaType: safeMediaType, posterPath: safePosterPath, title: resolvedTitle });
         await list.save();
 
         publishNotification({
