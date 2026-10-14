@@ -22,10 +22,13 @@ const Lists = () => {
     const token = localStorage.getItem('token');
 
     useEffect(() => {
-        if (!token) {
+        const currentToken = localStorage.getItem('token');
+        if (!currentToken) {
             navigate('/login');
+        } else {
+            refreshLists();
         }
-    }, [token, navigate]);
+    }, [navigate, refreshLists]);
 
     const handleCreateList = async (e) => {
         e.preventDefault();

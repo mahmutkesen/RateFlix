@@ -1,22 +1,27 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import api from '../services/api';
 
 const UserListsContext = createContext();
 
 export const UserListsProvider = ({ children }) => {
     const [userLists, setUserLists] = useState([]);
-    const [loading, setLoading] = useState(false);
+    const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
-    const token = localStorage.getItem('token');
 
-    const fetchUserLists = async (force = false) => {
-        if (!token) return;
-        if (userLists.length > 0 && !force) return;
+    const fetchUserLists = useCallback(async () => {
+        const token = localStorage.getItem('token');
+        if (!token) {
+            setUserLists([]);
+            setLoading(false);
+            return;
+        }
 
         setLoading(true);
         try {
             const res = await api.get('/lists');
-            setUserLists(res.data);
+            if (Array.isArray(res.data)) {
+                setUserLists(res.data);
+            }
             setError(null);
         } catch (err) {
             console.error("Error fetching user lists:", err);
@@ -24,28 +29,26 @@ export const UserListsProvider = ({ children }) => {
         } finally {
             setLoading(false);
         }
-    };
+    }, []);
 
     useEffect(() => {
+        fetchUserLists();
+
         const handleStorageChange = () => {
-            const newToken = localStorage.getItem('token');
-            if (newToken !== token) {
-                window.location.reload(); // Hard refresh on token change for safety
-            }
+            fetchUserLists();
         };
+
         window.addEventListener('storage', handleStorageChange);
-        
-        if (token) {
-            fetchUserLists(true);
-        }
         return () => window.removeEventListener('storage', handleStorageChange);
-    }, [token]);
+    }, [fetchUserLists]);
 
-    const refreshLists = () => fetchUserLists(true);
+    const refreshLists = useCallback(() => {
+        return fetchUserLists();
+    }, [fetchUserLists]);
 
-    const updateListLocally = (id, changes) => {
+    const updateListLocally = useCallback((id, changes) => {
         setUserLists(prev => prev.map(l => l._id === id ? { ...l, ...changes } : l));
-    };
+    }, []);
 
     return (
         <UserListsContext.Provider value={{ userLists, loading, error, refreshLists, updateListLocally }}>

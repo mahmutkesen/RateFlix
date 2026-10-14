@@ -39,9 +39,9 @@ function cleanData(data) {
 
     const cleanObj = {};
     for (const [key, value] of Object.entries(data)) {
-        // Drop any key that starts with '$' (NoSQL operator injection like $gt, $ne, $where, $regex) or contains '.'
-        if (key.startsWith('$') || key.includes('.')) {
-            console.warn(`[SECURITY] Blocked potential NoSQL injection key: ${key}`);
+        // Drop any key that starts with '$' (NoSQL operator), contains '.', or attempts Prototype Pollution
+        if (key.startsWith('$') || key.includes('.') || key === '__proto__' || key === 'constructor' || key === 'prototype') {
+            console.warn(`[SECURITY] Blocked dangerous key (NoSQL / Prototype Pollution): ${key}`);
             continue;
         }
 

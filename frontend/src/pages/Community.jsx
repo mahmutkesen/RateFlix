@@ -48,24 +48,33 @@ const Community = () => {
     };
 
     useEffect(() => {
+        let isMounted = true;
         const fetchCommunityData = async () => {
             setLoading(true);
             try {
                 const [reviewsRes, listsRes] = await Promise.all([
-                    api.get('/reviews/all').catch(() => ({ data: [] })),
-                    api.get('/lists/public').catch(() => ({ data: [] }))
+                    api.get('/reviews/all'),
+                    api.get('/lists/public')
                 ]);
-                setReviews(reviewsRes.data);
-                setLists(listsRes.data);
-                setReactions(prev => ({ ...initReactions(reviewsRes.data), ...initReactions(listsRes.data) }));
+                if (isMounted) {
+                    setReviews(Array.isArray(reviewsRes.data) ? reviewsRes.data : []);
+                    setLists(Array.isArray(listsRes.data) ? listsRes.data : []);
+                    setReactions(prev => ({ 
+                        ...initReactions(reviewsRes.data || []), 
+                        ...initReactions(listsRes.data || []) 
+                    }));
+                }
             } catch (err) {
                 console.error("Error fetching community data", err);
             } finally {
-                setLoading(false);
+                if (isMounted) {
+                    setLoading(false);
+                }
             }
         };
 
         fetchCommunityData();
+        return () => { isMounted = false; };
     }, [location.pathname]);
 
     const handleDeleteReview = (id) => {

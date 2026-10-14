@@ -2,76 +2,48 @@ import axios from 'axios';
 
 const api = axios.create({
     baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5000/api',
-    timeout: 60000,
+    timeout: 30000,
 });
 
-// Simple Get Request Cache (15 seconds - short enough to feel fresh)
-const cache = new Map();
-const CACHE_DURATION = 15000;
-
-export const clearCache = (urlPattern) => {
-    if (!urlPattern) {
-        cache.clear();
-    } else {
-        for (const key of cache.keys()) {
-            if (key.includes(urlPattern)) cache.delete(key);
-        }
-    }
-};
-
-// Request interceptor: attach token + serve cache for GETs
+// Request interceptor: attach fresh token from localStorage on EVERY request
 api.interceptors.request.use(
     (config) => {
         const token = localStorage.getItem('token');
         if (token) {
             config.headers.Authorization = `Bearer ${token}`;
         }
-
-        if (config.method === 'get') {
-            const cached = cache.get(config.url);
-            if (cached && (Date.now() - cached.time < CACHE_DURATION)) {
-                // Return a resolved promise with cached data
-                config.adapter = () => Promise.resolve({ ...cached.response, config });
-            }
-        }
-
         return config;
     },
     (error) => Promise.reject(error)
 );
 
-// Response interceptor: cache GETs, invalidate on mutations, handle 401
+// Response interceptor: auto-retry on server cold starts / network blips, handle 401
 api.interceptors.response.use(
-    (response) => {
-        try {
-            const method = response.config?.method;
-            if (method === 'get') {
-                cache.set(response.config.url, { response, time: Date.now() });
-            } else if (['post', 'put', 'patch', 'delete'].includes(method)) {
-                // Any mutation clears all cache so pages show fresh data instantly
-                cache.clear();
-            }
-        } catch (e) {
-            // Never let cache logic break a successful response
-        }
-        return response;
-    },
+    (response) => response,
     async (error) => {
-        // Handle 401 - token expired
+        const config = error.config;
+
+        // Handle 401 - token expired or invalid
         if (error.response?.status === 401) {
-            localStorage.removeItem('token');
-            localStorage.removeItem('user');
-            window.location.href = '/login?expired=true';
+            // Only redirect if not already on login/register page
+            if (!window.location.pathname.includes('/login') && !window.location.pathname.includes('/register')) {
+                localStorage.removeItem('token');
+                localStorage.removeItem('user');
+                window.location.href = '/login?expired=true';
+            }
             return Promise.reject(error);
         }
 
-        // Retry on 503 or timeout (Render cold start)
-        const config = error.config;
-        if (config && (error.response?.status === 503 || error.code === 'ECONNABORTED')) {
+        // Retry on 502, 503, 504, timeout or network blips (Render cold start)
+        const isRetryable = error.code === 'ECONNABORTED' ||
+                            error.code === 'ERR_NETWORK' ||
+                            (error.response && [502, 503, 504].includes(error.response.status));
+
+        if (config && isRetryable) {
             config._retryCount = (config._retryCount || 0) + 1;
             if (config._retryCount <= 3) {
-                console.log(`Render waking up... retry ${config._retryCount}`);
-                await new Promise(r => setTimeout(r, 3000));
+                console.log(`[API Retry] Server waking up or network blip... Attempt ${config._retryCount} for ${config.url}`);
+                await new Promise(r => setTimeout(r, 2000 * config._retryCount));
                 return api(config);
             }
         }
