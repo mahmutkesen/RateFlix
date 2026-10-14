@@ -7,7 +7,8 @@ import ConfirmModal from '../components/ConfirmModal';
 import { useToast } from '../components/Toast';
 import { 
     FaUser, FaStar, FaList, FaTrash, FaUserPlus, FaUserMinus, 
-    FaFilm, FaClock, FaThumbsUp, FaThumbsDown, FaHeart, FaChevronDown, FaChevronUp, FaComment 
+    FaFilm, FaClock, FaThumbsUp, FaThumbsDown, FaHeart, FaChevronDown, FaChevronUp, FaComment,
+    FaTimes, FaUserFriends, FaChevronRight
 } from 'react-icons/fa';
 import './Profile.css';
 
@@ -679,24 +680,44 @@ const Profile = () => {
 
             {/* Followers Modal */}
             {showFollowers && (
-                <div className="modal-overlay" onClick={() => setShowFollowers(false)}>
-                    <div className="modal-content glass-panel animate-scale-up" onClick={e => e.stopPropagation()}>
+                <div className="modal-overlay profile-modal-overlay" onClick={() => setShowFollowers(false)}>
+                    <div className="modal-content profile-modal-content glass-panel animate-scale-up" onClick={e => e.stopPropagation()}>
                         <div className="modal-header">
-                            <h3>Takipçiler ({followersCount})</h3>
-                            <button className="modal-close" onClick={() => setShowFollowers(false)}>×</button>
+                            <div className="modal-title-wrap">
+                                <FaUserFriends className="modal-header-icon" />
+                                <h3>Takipçiler</h3>
+                                <span className="modal-count-badge">{followersCount}</span>
+                            </div>
+                            <button className="modal-close" onClick={() => setShowFollowers(false)} aria-label="Kapat">
+                                <FaTimes />
+                            </button>
                         </div>
                         <div className="users-list">
-                            {user.followers?.length === 0 ? (
-                                <p style={{ color: 'var(--text-muted)', textAlign: 'center', padding: '1.5rem 0' }}>Henüz takipçi yok.</p>
+                            {!user.followers || user.followers.length === 0 ? (
+                                <div className="users-empty">
+                                    <FaUserFriends className="users-empty-icon" />
+                                    <p>Henüz takipçi yok.</p>
+                                </div>
                             ) : (
-                                user.followers?.map(f => (
-                                    <Link key={f._id} to={`/profile/${f.username}`} className="user-item" onClick={() => setShowFollowers(false)}>
-                                        <div className="user-item-avatar">
-                                            {f.profilePic ? <img src={f.profilePic} alt={f.username} /> : f.username.charAt(0).toUpperCase()}
-                                        </div>
-                                        <span>{f.username}</span>
-                                    </Link>
-                                ))
+                                user.followers.map(f => {
+                                    const uname = (typeof f === 'object' ? f.username : null) || 'Kullanıcı';
+                                    const fId = typeof f === 'object' ? f._id : f;
+                                    const fPic = typeof f === 'object' ? f.profilePic : null;
+                                    return (
+                                        <Link key={fId} to={`/profile/${uname}`} className="user-item" onClick={() => setShowFollowers(false)}>
+                                            <div className="user-item-left">
+                                                <div className="user-item-avatar">
+                                                    {fPic ? <img src={fPic} alt={uname} /> : uname.charAt(0).toUpperCase()}
+                                                </div>
+                                                <div className="user-item-info">
+                                                    <span className="user-item-name">{uname}</span>
+                                                    <span className="user-item-sub">Profili İncele</span>
+                                                </div>
+                                            </div>
+                                            <FaChevronRight className="user-item-arrow" />
+                                        </Link>
+                                    );
+                                })
                             )}
                         </div>
                     </div>
@@ -705,24 +726,44 @@ const Profile = () => {
 
             {/* Following Modal */}
             {showFollowing && (
-                <div className="modal-overlay" onClick={() => setShowFollowing(false)}>
-                    <div className="modal-content glass-panel animate-scale-up" onClick={e => e.stopPropagation()}>
+                <div className="modal-overlay profile-modal-overlay" onClick={() => setShowFollowing(false)}>
+                    <div className="modal-content profile-modal-content glass-panel animate-scale-up" onClick={e => e.stopPropagation()}>
                         <div className="modal-header">
-                            <h3>Takip Edilenler ({user.following?.length || 0})</h3>
-                            <button className="modal-close" onClick={() => setShowFollowing(false)}>×</button>
+                            <div className="modal-title-wrap">
+                                <FaUserFriends className="modal-header-icon" />
+                                <h3>Takip Edilenler</h3>
+                                <span className="modal-count-badge">{user.following?.length || 0}</span>
+                            </div>
+                            <button className="modal-close" onClick={() => setShowFollowing(false)} aria-label="Kapat">
+                                <FaTimes />
+                            </button>
                         </div>
                         <div className="users-list">
-                            {user.following?.length === 0 ? (
-                                <p style={{ color: 'var(--text-muted)', textAlign: 'center', padding: '1.5rem 0' }}>Henüz kimse takip edilmiyor.</p>
+                            {!user.following || user.following.length === 0 ? (
+                                <div className="users-empty">
+                                    <FaUserFriends className="users-empty-icon" />
+                                    <p>Henüz kimse takip edilmiyor.</p>
+                                </div>
                             ) : (
-                                user.following?.map(f => (
-                                    <Link key={f._id} to={`/profile/${f.username}`} className="user-item" onClick={() => setShowFollowing(false)}>
-                                        <div className="user-item-avatar">
-                                            {f.profilePic ? <img src={f.profilePic} alt={f.username} /> : f.username.charAt(0).toUpperCase()}
-                                        </div>
-                                        <span>{f.username}</span>
-                                    </Link>
-                                ))
+                                user.following.map(f => {
+                                    const uname = (typeof f === 'object' ? f.username : null) || 'Kullanıcı';
+                                    const fId = typeof f === 'object' ? f._id : f;
+                                    const fPic = typeof f === 'object' ? f.profilePic : null;
+                                    return (
+                                        <Link key={fId} to={`/profile/${uname}`} className="user-item" onClick={() => setShowFollowing(false)}>
+                                            <div className="user-item-left">
+                                                <div className="user-item-avatar">
+                                                    {fPic ? <img src={fPic} alt={uname} /> : uname.charAt(0).toUpperCase()}
+                                                </div>
+                                                <div className="user-item-info">
+                                                    <span className="user-item-name">{uname}</span>
+                                                    <span className="user-item-sub">Profili İncele</span>
+                                                </div>
+                                            </div>
+                                            <FaChevronRight className="user-item-arrow" />
+                                        </Link>
+                                    );
+                                })
                             )}
                         </div>
                     </div>
