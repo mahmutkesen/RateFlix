@@ -175,7 +175,7 @@ const Navbar = () => {
           <span className="brand-text">Rate<span className="brand-highlight">Flix</span></span>
         </Link>
 
-        {/* Search Bar */}
+        {/* Expanded Search Bar with Integrated Category Toggle */}
         <div className="nav-search-container" ref={searchRef}>
           <form className="nav-search" onSubmit={handleSearchSubmit}>
             <FaSearch className="search-icon-min" />
@@ -186,70 +186,73 @@ const Navbar = () => {
               onChange={(e) => setSearchQuery(e.target.value)}
               onFocus={() => searchQuery.length > 1 && setShowSuggestions(true)}
             />
-          </form>
-          {showSuggestions && searchQuery && renderSuggestions()}
-        </div>
 
-        {/* Right Navigation Actions: Kategoriler | Keşfet | Topluluk | Hamburger */}
-        <div className="nav-right-actions">
-          {/* Categories Dropdown Trigger */}
-          <div className="nav-category-dropdown" ref={dropdownRef}>
-            <button 
-              type="button"
-              className={`nav-link-item category-trigger-btn ${showDropdown ? 'active' : ''}`}
-              onClick={() => setShowDropdown(!showDropdown)}
-              title="Kategorileri Keşfet"
-            >
-              <FaFilm className="nav-link-icon" />
-              <span>Kategoriler</span>
-              <FaChevronDown className="dropdown-chevron" />
-            </button>
-            
-            {showDropdown && (
-              <div className="dropdown-menu glass-panel animate-fade-in">
-                <div className="dropdown-columns">
-                  <div className="dropdown-section">
-                    <div className="dropdown-section-header">
-                      <span className="dropdown-badge">🎬 Filmler</span>
-                    </div>
-                    <div className="genre-chips-container">
-                      {UNIFIED_CATEGORIES.map(cat => (
-                        <Link 
-                          key={`movie-${cat.id}`} 
-                          to={`/category/movie?genre=${cat.id}`}
-                          onClick={() => setShowDropdown(false)}
-                          className="genre-chip"
-                        >
-                          {cat.name}
-                        </Link>
-                      ))}
-                    </div>
-                  </div>
+            {/* Category toggle button inside search bar right edge */}
+            <div className="search-category-trigger-wrap" ref={dropdownRef}>
+              <button 
+                type="button" 
+                className={`search-category-btn ${showDropdown ? 'active' : ''}`}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowDropdown(!showDropdown);
+                }}
+                title="Kategoriler"
+                aria-label="Kategorileri Göster"
+              >
+                <FaFilm className="search-cat-icon" />
+                <FaChevronDown className="search-cat-chevron" />
+              </button>
 
-                  <div className="dropdown-section">
-                    <div className="dropdown-section-header">
-                      <span className="dropdown-badge">📺 Diziler</span>
+              {/* Categories Dropdown right below search bar */}
+              {showDropdown && (
+                <div className="dropdown-menu glass-panel animate-fade-in" onClick={(e) => e.stopPropagation()}>
+                  <div className="dropdown-columns">
+                    <div className="dropdown-section">
+                      <div className="dropdown-section-header">
+                        <span className="dropdown-badge">🎬 Filmler</span>
+                      </div>
+                      <div className="genre-chips-container">
+                        {UNIFIED_CATEGORIES.map(cat => (
+                          <Link 
+                            key={`movie-${cat.id}`} 
+                            to={`/category/movie?genre=${cat.id}`}
+                            onClick={() => setShowDropdown(false)}
+                            className="genre-chip"
+                          >
+                            {cat.name}
+                          </Link>
+                        ))}
+                      </div>
                     </div>
-                    <div className="genre-chips-container">
-                      {UNIFIED_CATEGORIES.map(cat => (
-                        <Link 
-                          key={`tv-${cat.id}`} 
-                          to={`/category/tv?genre=${cat.id}`}
-                          onClick={() => setShowDropdown(false)}
-                          className="genre-chip"
-                        >
-                          {cat.name}
-                        </Link>
-                      ))}
+
+                    <div className="dropdown-section">
+                      <div className="dropdown-section-header">
+                        <span className="dropdown-badge">📺 Diziler</span>
+                      </div>
+                      <div className="genre-chips-container">
+                        {UNIFIED_CATEGORIES.map(cat => (
+                          <Link 
+                            key={`tv-${cat.id}`} 
+                            to={`/category/tv?genre=${cat.id}`}
+                            onClick={() => setShowDropdown(false)}
+                            className="genre-chip"
+                          >
+                            {cat.name}
+                          </Link>
+                        ))}
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            )}
-          </div>
+              )}
+            </div>
+          </form>
 
-          <span className="nav-divider" />
+          {showSuggestions && searchQuery && renderSuggestions()}
+        </div>
 
+        {/* Right Navigation Actions: Keşfet | Topluluk | Hamburger */}
+        <div className="nav-right-actions">
           {/* Keşfet Link */}
           <Link to="/" className="nav-link-item">
             <span>Keşfet</span>
