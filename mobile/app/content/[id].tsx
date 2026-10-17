@@ -17,6 +17,7 @@ interface ReviewData {
     reviewText: string;
     user: { _id: string; username: string; profilePic?: string };
     likes?: string[];
+    dislikes?: string[];
     createdAt: string;
 }
 
@@ -134,14 +135,43 @@ export default function ContentDetailScreen() {
     };
 
     const handleLikeReview = async (reviewId: string) => {
-        if (!token) return;
+        if (!token || !user) return;
         try {
             await api.post(`/reviews/${reviewId}/like`);
             setReviews(prev => prev.map(r => {
                 if (r._id === reviewId) {
-                    const likes = r.likes || [];
-                    const isLiked = likes.includes(user!.id);
-                    return { ...r, likes: isLiked ? likes.filter(l => l !== user!.id) : [...likes, user!.id] };
+                    let likes = r.likes || [];
+                    let dislikes = r.dislikes || [];
+                    const isLiked = likes.includes(user.id);
+                    if (isLiked) {
+                        likes = likes.filter(l => l !== user.id);
+                    } else {
+                        likes = [...likes, user.id];
+                        dislikes = dislikes.filter(d => d !== user.id);
+                    }
+                    return { ...r, likes, dislikes };
+                }
+                return r;
+            }));
+        } catch { }
+    };
+
+    const handleDislikeReview = async (reviewId: string) => {
+        if (!token || !user) return;
+        try {
+            await api.post(`/reviews/${reviewId}/dislike`);
+            setReviews(prev => prev.map(r => {
+                if (r._id === reviewId) {
+                    let likes = r.likes || [];
+                    let dislikes = r.dislikes || [];
+                    const isDisliked = dislikes.includes(user.id);
+                    if (isDisliked) {
+                        dislikes = dislikes.filter(d => d !== user.id);
+                    } else {
+                        dislikes = [...dislikes, user.id];
+                        likes = likes.filter(l => l !== user.id);
+                    }
+                    return { ...r, likes, dislikes };
                 }
                 return r;
             }));
@@ -326,14 +356,29 @@ export default function ContentDetailScreen() {
                                             ))}
                                         </View>
                                         {token && (
-                                            <TouchableOpacity onPress={() => handleLikeReview(review._id)} style={styles.likeBtn}>
-                                                <Ionicons
-                                                    name={(review.likes || []).includes(user?.id || '') ? 'heart' : 'heart-outline'}
-                                                    size={18}
-                                                    color={(review.likes || []).includes(user?.id || '') ? '#e74c3c' : '#666'}
-                                                />
-                                                <Text style={styles.likeCount}>{(review.likes || []).length}</Text>
-                                            </TouchableOpacity>
+                                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                                                <TouchableOpacity onPress={() => handleLikeReview(review._id)} style={styles.likeBtn}>
+                                                    <Ionicons
+                                                        name={(review.likes || []).includes(user?.id || '') ? 'thumbs-up' : 'thumbs-up-outline'}
+                                                        size={14}
+                                                        color={(review.likes || []).includes(user?.id || '') ? '#2ecc71' : '#666'}
+                                                    />
+                                                    <Text style={[styles.likeCount, (review.likes || []).includes(user?.id || '') && { color: '#2ecc71' }]}>
+                                                        {(review.likes || []).length}
+                                                    </Text>
+                                                </TouchableOpacity>
+
+                                                <TouchableOpacity onPress={() => handleDislikeReview(review._id)} style={styles.likeBtn}>
+                                                    <Ionicons
+                                                        name={(review.dislikes || []).includes(user?.id || '') ? 'thumbs-down' : 'thumbs-down-outline'}
+                                                        size={14}
+                                                        color={(review.dislikes || []).includes(user?.id || '') ? '#e74c3c' : '#666'}
+                                                    />
+                                                    <Text style={[styles.likeCount, (review.dislikes || []).includes(user?.id || '') && { color: '#e74c3c' }]}>
+                                                        {(review.dislikes || []).length}
+                                                    </Text>
+                                                </TouchableOpacity>
+                                            </View>
                                         )}
                                         {token && (user?.id === review.user?._id || user?.role === 'admin') && (
                                             <TouchableOpacity onPress={() => handleDeleteReview(review._id)}>

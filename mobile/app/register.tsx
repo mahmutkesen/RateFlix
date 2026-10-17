@@ -16,12 +16,33 @@ export default function RegisterScreen() {
     const { register } = useAuth();
 
     const handleRegister = async () => {
-        if (!username.trim() || !email.trim() || !password.trim()) {
+        const trimmedUsername = username.trim();
+        const trimmedEmail = email.trim().toLowerCase();
+
+        if (!trimmedUsername || !trimmedEmail || !password.trim()) {
             Alert.alert('Hata', 'Lütfen tüm alanları doldurun.');
             return;
         }
-        if (password.length < 6) {
-            Alert.alert('Hata', 'Şifre en az 6 karakter olmalıdır.');
+
+        if (trimmedUsername.length < 3 || trimmedUsername.length > 30) {
+            Alert.alert('Hata', 'Kullanıcı adı 3 ile 30 karakter arasında olmalıdır.');
+            return;
+        }
+
+        const usernameRegex = /^[a-zA-Z0-9_.-]+$/;
+        if (!usernameRegex.test(trimmedUsername)) {
+            Alert.alert('Hata', 'Kullanıcı adı yalnızca harf, rakam, alt çizgi, nokta ve tire içerebilir.');
+            return;
+        }
+
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(trimmedEmail) || trimmedEmail.length > 100) {
+            Alert.alert('Hata', 'Geçerli bir e-posta adresi giriniz.');
+            return;
+        }
+
+        if (password.length < 6 || password.length > 128) {
+            Alert.alert('Hata', 'Şifre en az 6, en fazla 128 karakter olmalıdır.');
             return;
         }
         setLoading(true);

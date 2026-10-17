@@ -1,7 +1,7 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import {
     View, Text, StyleSheet, FlatList, TouchableOpacity,
-    Image, ActivityIndicator, RefreshControl, TextInput, Alert
+    Image, ActivityIndicator, RefreshControl, TextInput, Alert, Modal, ScrollView
 } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import { useAuth } from '../../context/AuthContext';
@@ -29,18 +29,43 @@ interface ListItem {
     type: string;
     description?: string;
     items: any[];
-    user: { _id: string; username: string };
+    user: { _id: string; username: string; profilePic?: string };
     likes?: string[];
     dislikes?: string[];
+    createdAt?: string;
+}
+
+interface FriendActivity {
+    followingCount: number;
+    lists: any[];
+    comments: any[];
+    likedContent: any[];
 }
 
 export default function CommunityScreen() {
     const { user, token } = useAuth();
-    const [activeTab, setActiveTab] = useState<'reviews' | 'lists'>('reviews');
+    const [activeTab, setActiveTab] = useState<'reviews' | 'lists' | 'friends'>('reviews');
+    const [friendSubTab, setFriendSubTab] = useState<'lists' | 'comments' | 'reactions'>('lists');
+    const [friendReactionFilter, setFriendReactionFilter] = useState<'all' | 'likes' | 'dislikes'>('all');
+
+    // Search and Sort
+    const [searchQuery, setSearchQuery] = useState('');
+    const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'most_liked' | 'most_disliked' | 'most_commented' | 'highest_rated'>('newest');
+    const [showSortModal, setShowSortModal] = useState(false);
+
+    // Data states
     const [reviews, setReviews] = useState<ReviewItem[]>([]);
     const [lists, setLists] = useState<ListItem[]>([]);
+    const [friendActivity, setFriendActivity] = useState<FriendActivity>({
+        followingCount: 0,
+        lists: [],
+        comments: [],
+        likedContent: []
+    });
+
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
+    const [loadingFriends, setLoadingFriends] = useState(false);
     const [error, setError] = useState(false);
 
     // Comment states
@@ -48,6 +73,15 @@ export default function CommunityScreen() {
     const [comments, setComments] = useState<Record<string, any[]>>({});
     const [commentText, setCommentText] = useState<Record<string, string>>({});
     const [loadingComments, setLoadingComments] = useState<Record<string, boolean>>({});
+
+    // Review Edit Modal state
+    const [editingReview, setEditingReview] = useState<ReviewItem | null>(null);
+    const [editRating, setEditRating] = useState(5);
+    const [editText, setEditText] = useState('');
+    const [submittingEdit, setSubmittingEdit] = useState(false);
+
+    // Expanded list items
+    const [expandedListId, setExpandedListId] = useState<string | null>(null);
 
     const fetchData = async () => {
         setError(false);
@@ -58,6 +92,10 @@ export default function CommunityScreen() {
             ]);
             setReviews(Array.isArray(reviewsRes.data) ? reviewsRes.data : []);
             setLists(Array.isArray(listsRes.data) ? listsRes.data : []);
+
+            if (token && user) {
+                fetchFriendActivity();
+            }
         } catch (e) {
             console.error('Community fetch error:', e);
             setError(true);
@@ -67,11 +105,31 @@ export default function CommunityScreen() {
         }
     };
 
+    const fetchFriendActivity = async () => {
+        if (!token) return;
+        setLoadingFriends(true);
+        try {
+            const res = await api.get('/users/friends/activity');
+            if (res.data) {
+                const likedOrReacted = res.data.likedContent || res.data.reactedContent || [];
+                setFriendActivity({
+                    followingCount: res.data.followingCount || 0,
+                    lists: Array.isArray(res.data.lists) ? res.data.lists : [],
+                    comments: Array.isArray(res.data.comments) ? res.data.comments : [],
+                    likedContent: Array.isArray(likedOrReacted) ? likedOrReacted : []
+                });
+            }
+        } catch (err) {
+            console.error('Error fetching friend activity:', err);
+        } finally {
+            setLoadingFriends(false);
+        }
+    };
+
     useFocusEffect(
         useCallback(() => {
-            setLoading(true);
             fetchData();
-        }, [])
+        }, [token])
     );
 
     const onRefresh = () => {
@@ -79,35 +137,149 @@ export default function CommunityScreen() {
         fetchData();
     };
 
-    const handleLike = async (id: string, type: 'review' | 'list') => {
-        if (!token) return;
-        const endpoint = type === 'review' ? `/reviews/${id}/like` : `/lists/${id}/like`;
+    // Filter and Sort reviews
+    const filteredReviews = useMemo(() => {
+        let list = [...reviews];
+        if (searchQuery.trim()) {
+            const q = searchQuery.toLowerCase().trim();
+            list = list.filter(r =>
+                r.movieTitle?.toLowerCase().includes(q) ||
+                r.reviewText?.toLowerCase().includes(q) ||
+                r.user?.username?.toLowerCase().includes(q)
+            );
+        }
+
+        list.sort((a, b) => {
+            if (sortBy === 'oldest') {
+                return new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime();
+            }
+            if (sortBy === 'most_liked') {
+                return (b.likes?.length || 0) - (a.likes?.length || 0);
+            }
+            if (sortBy === 'most_disliked') {
+                return (b.dislikes?.length || 0) - (a.dislikes?.length || 0);
+            }
+            if (sortBy === 'most_commented') {
+                const aCount = comments[a._id]?.length || 0;
+                const bCount = comments[b._id]?.length || 0;
+                return bCount - aCount;
+            }
+            if (sortBy === 'highest_rated') {
+                return (b.rating || 0) - (a.rating || 0);
+            }
+            return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
+        });
+
+        return list;
+    }, [reviews, searchQuery, sortBy, comments]);
+
+    // Filter and Sort lists
+    const filteredLists = useMemo(() => {
+        let list = [...lists];
+        if (searchQuery.trim()) {
+            const q = searchQuery.toLowerCase().trim();
+            list = list.filter(l =>
+                l.name?.toLowerCase().includes(q) ||
+                l.description?.toLowerCase().includes(q) ||
+                l.user?.username?.toLowerCase().includes(q)
+            );
+        }
+
+        list.sort((a, b) => {
+            if (sortBy === 'oldest') {
+                return new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime();
+            }
+            if (sortBy === 'most_liked') {
+                return (b.likes?.length || 0) - (a.likes?.length || 0);
+            }
+            if (sortBy === 'most_disliked') {
+                return (b.dislikes?.length || 0) - (a.dislikes?.length || 0);
+            }
+            if (sortBy === 'most_commented') {
+                const aCount = comments[a._id]?.length || 0;
+                const bCount = comments[b._id]?.length || 0;
+                return bCount - aCount;
+            }
+            return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
+        });
+
+        return list;
+    }, [lists, searchQuery, sortBy, comments]);
+
+    // Likes & Dislikes handling
+    const handleReaction = async (id: string, type: 'review' | 'list', action: 'like' | 'dislike') => {
+        if (!token || !user) {
+            Alert.alert('Giriş Gerekli', 'Bu işlemi gerçekleştirmek için lütfen giriş yapın.', [
+                { text: 'İptal' },
+                { text: 'Giriş Yap', onPress: () => router.push('/login') }
+            ]);
+            return;
+        }
+
+        const endpoint = type === 'review' ? `/reviews/${id}/${action}` : `/lists/${id}/${action}`;
+
+        if (type === 'review') {
+            setReviews(prev => prev.map(r => {
+                if (r._id !== id) return r;
+                let likes = [...(r.likes || [])];
+                let dislikes = [...(r.dislikes || [])];
+                const userId = user.id;
+
+                if (action === 'like') {
+                    if (likes.includes(userId)) {
+                        likes = likes.filter(l => l !== userId);
+                    } else {
+                        likes.push(userId);
+                        dislikes = dislikes.filter(d => d !== userId);
+                    }
+                } else {
+                    if (dislikes.includes(userId)) {
+                        dislikes = dislikes.filter(d => d !== userId);
+                    } else {
+                        dislikes.push(userId);
+                        likes = likes.filter(l => l !== userId);
+                    }
+                }
+                return { ...r, likes, dislikes };
+            }));
+        } else {
+            setLists(prev => prev.map(l => {
+                if (l._id !== id) return l;
+                let likes = [...(l.likes || [])];
+                let dislikes = [...(l.dislikes || [])];
+                const userId = user.id;
+
+                if (action === 'like') {
+                    if (likes.includes(userId)) {
+                        likes = likes.filter(x => x !== userId);
+                    } else {
+                        likes.push(userId);
+                        dislikes = dislikes.filter(x => x !== userId);
+                    }
+                } else {
+                    if (dislikes.includes(userId)) {
+                        dislikes = dislikes.filter(x => x !== userId);
+                    } else {
+                        dislikes.push(userId);
+                        likes = likes.filter(x => x !== userId);
+                    }
+                }
+                return { ...l, likes, dislikes };
+            }));
+        }
+
         try {
             await api.post(endpoint);
-            if (type === 'review') {
-                setReviews(prev => prev.map(r => {
-                    if (r._id === id) {
-                        const liked = (r.likes || []).includes(user!.id);
-                        return { ...r, likes: liked ? (r.likes || []).filter(l => l !== user!.id) : [...(r.likes || []), user!.id] };
-                    }
-                    return r;
-                }));
-            } else {
-                setLists(prev => prev.map(l => {
-                    if (l._id === id) {
-                        const liked = (l.likes || []).includes(user!.id);
-                        return { ...l, likes: liked ? (l.likes || []).filter(x => x !== user!.id) : [...(l.likes || []), user!.id] };
-                    }
-                    return l;
-                }));
-            }
-        } catch { }
+        } catch {
+            fetchData();
+        }
     };
 
+    // Comments
     const toggleComments = async (targetId: string) => {
         const isExpanded = !expandedComments[targetId];
         setExpandedComments(prev => ({ ...prev, [targetId]: isExpanded }));
-        if (isExpanded && !comments[targetId]) {
+        if (isExpanded && (!comments[targetId] || comments[targetId].length === 0)) {
             fetchComments(targetId);
         }
     };
@@ -118,28 +290,128 @@ export default function CommunityScreen() {
             const res = await api.get(`/comments/${targetId}`);
             setComments(prev => ({ ...prev, [targetId]: res.data || [] }));
         } catch (err) {
-            console.error("Comment fetch error", err);
+            console.error('Comment fetch error', err);
         } finally {
             setLoadingComments(prev => ({ ...prev, [targetId]: false }));
         }
     };
 
-    const handleCommentSubmit = async (targetId: string, targetType: 'review' | 'list') => {
+    const handleCommentSubmit = async (targetId: string, targetType: 'Review' | 'List') => {
         const text = commentText[targetId];
         if (!text || !text.trim()) return;
-        if (!token) return Alert.alert('Hata', 'Yorum yapmak için giriş yapmalısınız.');
+        if (!token) {
+            Alert.alert('Giriş Gerekli', 'Yorum yapmak için giriş yapmalısınız.');
+            return;
+        }
 
         try {
             const res = await api.post('/comments', {
-                content: text,
+                content: text.trim(),
                 targetId,
                 targetType
             });
             setComments(prev => ({ ...prev, [targetId]: [res.data, ...(prev[targetId] || [])] }));
             setCommentText(prev => ({ ...prev, [targetId]: '' }));
-        } catch (err) {
+        } catch {
             Alert.alert('Hata', 'Yorum eklenemedi.');
         }
+    };
+
+    const handleCommentReaction = async (commentId: string, targetId: string, action: 'like' | 'dislike') => {
+        if (!token || !user) {
+            Alert.alert('Giriş Gerekli', 'Yorumları oylamak için giriş yapın.');
+            return;
+        }
+        try {
+            await api.post(`/comments/${commentId}/${action}`);
+            fetchComments(targetId);
+        } catch { }
+    };
+
+    const handleDeleteComment = (commentId: string, targetId: string) => {
+        Alert.alert('Yorumu Sil', 'Bu yorumu silmek istediğinize emin misiniz?', [
+            { text: 'İptal', style: 'cancel' },
+            {
+                text: 'Sil',
+                style: 'destructive',
+                onPress: async () => {
+                    try {
+                        await api.delete(`/comments/${commentId}`);
+                        setComments(prev => ({
+                            ...prev,
+                            [targetId]: (prev[targetId] || []).filter(c => c._id !== commentId)
+                        }));
+                    } catch {
+                        Alert.alert('Hata', 'Yorum silinemedi.');
+                    }
+                }
+            }
+        ]);
+    };
+
+    // Review Edit & Delete
+    const openEditModal = (review: ReviewItem) => {
+        setEditingReview(review);
+        setEditRating(review.rating || 5);
+        setEditText(review.reviewText || '');
+    };
+
+    const handleSaveEditReview = async () => {
+        if (!editingReview) return;
+        setSubmittingEdit(true);
+        try {
+            await api.post('/reviews', {
+                tmdbId: editingReview.tmdbId,
+                mediaType: editingReview.mediaType,
+                rating: editRating,
+                reviewText: editText.trim(),
+                movieTitle: editingReview.movieTitle,
+                posterPath: editingReview.posterPath
+            });
+            setReviews(prev => prev.map(r => r._id === editingReview._id ? { ...r, rating: editRating, reviewText: editText.trim() } : r));
+            setEditingReview(null);
+            Alert.alert('Başarılı', 'İnceleme güncellendi.');
+        } catch {
+            Alert.alert('Hata', 'İnceleme güncellenemedi.');
+        } finally {
+            setSubmittingEdit(false);
+        }
+    };
+
+    const handleDeleteReview = (reviewId: string) => {
+        Alert.alert('İncelemeyi Sil', 'Bu incelemeyi silmek istediğinize emin misiniz?', [
+            { text: 'İptal', style: 'cancel' },
+            {
+                text: 'Sil',
+                style: 'destructive',
+                onPress: async () => {
+                    try {
+                        await api.delete(`/reviews/${reviewId}`);
+                        setReviews(prev => prev.filter(r => r._id !== reviewId));
+                    } catch {
+                        Alert.alert('Hata', 'Silme işlemi başarısız.');
+                    }
+                }
+            }
+        ]);
+    };
+
+    const handleDeleteList = (listId: string, listName: string) => {
+        Alert.alert('Listeyi Sil', `"${listName}" listesini silmek istediğinize emin misiniz?`, [
+            { text: 'İptal', style: 'cancel' },
+            {
+                text: 'Sil',
+                style: 'destructive',
+                onPress: async () => {
+                    try {
+                        await api.delete(`/lists/${listId}`);
+                        setLists(prev => prev.filter(l => l._id !== listId));
+                    } catch {
+                        Alert.alert('Hata', 'Liste silinemedi.');
+                    }
+                }
+            }
+        ]);
     };
 
     const timeAgo = (date: string) => {
@@ -157,112 +429,223 @@ export default function CommunityScreen() {
         return d.toLocaleDateString('tr-TR');
     };
 
+    const getSortTitle = (s: string) => {
+        switch (s) {
+            case 'oldest': return 'En Eski';
+            case 'most_liked': return 'En Çok Beğenilen';
+            case 'most_disliked': return 'En Çok Dislike';
+            case 'most_commented': return 'En Çok Yorum';
+            case 'highest_rated': return 'En Yüksek Puan';
+            default: return 'En Yeni';
+        }
+    };
+
+    // Render Review Item
     const renderReview = ({ item }: { item: ReviewItem }) => {
         const isLiked = user ? (item.likes || []).includes(user.id) : false;
+        const isDisliked = user ? (item.dislikes || []).includes(user.id) : false;
+        const isMyReview = user && (item.user?._id === user.id || item.user?._id === (user as any)._id);
+
         return (
-            <TouchableOpacity
-                style={styles.reviewCard}
-                activeOpacity={0.85}
-                onPress={() => router.push(`/content/${item.tmdbId}?type=${item.mediaType}`)}
-            >
+            <View style={styles.reviewCard}>
                 <View style={styles.reviewRow}>
-                    <Image source={{ uri: getImageUrl(item.posterPath, 'w185') }} style={styles.reviewPoster} />
+                    <TouchableOpacity
+                        activeOpacity={0.8}
+                        onPress={() => router.push(`/content/${item.tmdbId}?type=${item.mediaType}`)}
+                    >
+                        <Image source={{ uri: getImageUrl(item.posterPath, 'w185') }} style={styles.reviewPoster} />
+                    </TouchableOpacity>
                     <View style={styles.reviewContent}>
-                        <TouchableOpacity style={styles.userRow} activeOpacity={0.7} onPress={() => router.push(`/user/${item.user?._id}`)}>
-                            <View style={styles.userAvatar}>
-                                <Text style={styles.userAvatarText}>
-                                    {item.user?.username?.charAt(0).toUpperCase() || '?'}
-                                </Text>
-                            </View>
-                            <Text style={styles.userName}>{item.user?.username || 'Kullanıcı'}</Text>
+                        <View style={styles.reviewTopRow}>
+                            <TouchableOpacity
+                                style={styles.userRow}
+                                activeOpacity={0.7}
+                                onPress={() => router.push(`/user/${item.user?._id}`)}
+                            >
+                                <View style={styles.userAvatar}>
+                                    <Text style={styles.userAvatarText}>
+                                        {item.user?.username?.charAt(0).toUpperCase() || '?'}
+                                    </Text>
+                                </View>
+                                <Text style={styles.userName} numberOfLines={1}>{item.user?.username || 'Kullanıcı'}</Text>
+                            </TouchableOpacity>
                             <Text style={styles.timeText}>{timeAgo(item.createdAt)}</Text>
+                        </View>
+
+                        <TouchableOpacity
+                            onPress={() => router.push(`/content/${item.tmdbId}?type=${item.mediaType}`)}
+                            activeOpacity={0.8}
+                        >
+                            <Text style={styles.movieTitle} numberOfLines={1}>{item.movieTitle}</Text>
                         </TouchableOpacity>
-                        <Text style={styles.movieTitle} numberOfLines={1}>{item.movieTitle}</Text>
+
                         <View style={styles.starsRow}>
                             {[1, 2, 3, 4, 5].map(s => (
                                 <Ionicons key={s} name={s <= item.rating ? 'star' : 'star-outline'} size={14} color="#E5B505" />
                             ))}
                         </View>
+
                         {item.reviewText ? (
-                            <Text style={styles.reviewText} numberOfLines={3}>"{item.reviewText}"</Text>
+                            <Text style={styles.reviewText}>"{item.reviewText}"</Text>
                         ) : (
                             <Text style={styles.reviewTextEmpty}>Sadece puan verdi.</Text>
                         )}
+
                         <View style={styles.actionsRow}>
+                            {/* Like Button */}
                             <TouchableOpacity
-                                style={[styles.actionBtn, isLiked ? styles.actionBtnActive : {}]}
-                                onPress={() => handleLike(item._id, 'review')}
+                                style={[styles.actionBtn, isLiked && styles.actionBtnLiked]}
+                                onPress={() => handleReaction(item._id, 'review', 'like')}
+                                activeOpacity={0.7}
                             >
-                                <Ionicons name={isLiked ? 'heart' : 'heart-outline'} size={14} color={isLiked ? '#e74c3c' : '#666'} />
-                                <Text style={[styles.actionText, isLiked && { color: '#e74c3c' }]}>{(item.likes || []).length}</Text>
+                                <Ionicons name={isLiked ? 'thumbs-up' : 'thumbs-up-outline'} size={13} color={isLiked ? '#2ecc71' : '#888'} />
+                                <Text style={[styles.actionText, isLiked && { color: '#2ecc71' }]}>{(item.likes || []).length}</Text>
                             </TouchableOpacity>
+
+                            {/* Dislike Button */}
                             <TouchableOpacity
-                                style={[styles.actionBtn, expandedComments[item._id] ? styles.actionBtnActive : {}]}
+                                style={[styles.actionBtn, isDisliked && styles.actionBtnDisliked]}
+                                onPress={() => handleReaction(item._id, 'review', 'dislike')}
+                                activeOpacity={0.7}
+                            >
+                                <Ionicons name={isDisliked ? 'thumbs-down' : 'thumbs-down-outline'} size={13} color={isDisliked ? '#e74c3c' : '#888'} />
+                                <Text style={[styles.actionText, isDisliked && { color: '#e74c3c' }]}>{(item.dislikes || []).length}</Text>
+                            </TouchableOpacity>
+
+                            {/* Comment Toggle */}
+                            <TouchableOpacity
+                                style={[styles.actionBtn, expandedComments[item._id] && styles.actionBtnActive]}
                                 onPress={() => toggleComments(item._id)}
+                                activeOpacity={0.7}
                             >
-                                <Ionicons name="chatbubble-outline" size={14} color={expandedComments[item._id] ? '#E5B505' : '#666'} />
-                                <Text style={styles.actionText}>{comments[item._id]?.length || 0}</Text>
+                                <Ionicons name="chatbubble-outline" size={13} color={expandedComments[item._id] ? '#E5B505' : '#888'} />
+                                <Text style={[styles.actionText, expandedComments[item._id] && { color: '#E5B505' }]}>
+                                    {comments[item._id]?.length || 0}
+                                </Text>
                             </TouchableOpacity>
+
+                            {/* Owner / Admin Actions */}
+                            {isMyReview && (
+                                <View style={styles.ownerActions}>
+                                    <TouchableOpacity style={styles.iconMiniBtn} onPress={() => openEditModal(item)}>
+                                        <Ionicons name="create-outline" size={16} color="#E5B505" />
+                                    </TouchableOpacity>
+                                    <TouchableOpacity style={styles.iconMiniBtn} onPress={() => handleDeleteReview(item._id)}>
+                                        <Ionicons name="trash-outline" size={16} color="#e74c3c" />
+                                    </TouchableOpacity>
+                                </View>
+                            )}
                         </View>
-                        {expandedComments[item._id] && renderCommentSection(item._id, 'review')}
                     </View>
                 </View>
-            </TouchableOpacity>
-        );
-    };
 
-    const renderList = ({ item, index }: { item: ListItem; index: number }) => {
-        const colors = ['#ff7675', '#74b9ff', '#55efc4', '#ffeaa7', '#a29bfe', '#fd79a8'];
-        const color = colors[index % colors.length];
-        const isLiked = user ? (item.likes || []).includes(user.id) : false;
-        return (
-            <View style={styles.listCard}>
-                <TouchableOpacity style={[styles.userBadge, { backgroundColor: color + '22', borderColor: color + '44' }]} activeOpacity={0.7} onPress={() => router.push(`/user/${item.user?._id}`)}>
-                    <Text style={[styles.userBadgeText, { color }]}>{item.user?.username || 'Kullanıcı'}</Text>
-                </TouchableOpacity>
-                <Text style={styles.listName}>{item.name}</Text>
-                {item.description ? <Text style={styles.listDesc}>{item.description}</Text> : null}
-                <Text style={styles.listCount}>{item.items?.length || 0} içerik</Text>
-                {item.items && item.items.length > 0 && (
-                    <FlatList
-                        data={item.items.slice(0, 6)}
-                        horizontal
-                        showsHorizontalScrollIndicator={false}
-                        keyExtractor={(it, i) => `${it.tmdbId}-${i}`}
-                        style={{ marginTop: 12 }}
-                        renderItem={({ item: listItem }) => (
-                            <TouchableOpacity
-                                onPress={() => router.push(`/content/${listItem.tmdbId}?type=${listItem.mediaType || 'movie'}`)}
-                                activeOpacity={0.8}
-                            >
-                                <Image source={{ uri: getImageUrl(listItem.posterPath, 'w92') }} style={styles.listPoster} />
-                            </TouchableOpacity>
-                        )}
-                        ItemSeparatorComponent={() => <View style={{ width: 6 }} />}
-                    />
-                )}
-                <View style={styles.listActions}>
-                    <TouchableOpacity
-                        style={[styles.actionBtn, isLiked ? styles.actionBtnActive : {}]}
-                        onPress={() => handleLike(item._id, 'list')}
-                    >
-                        <Ionicons name={isLiked ? 'heart' : 'heart-outline'} size={14} color={isLiked ? '#e74c3c' : '#666'} />
-                        <Text style={[styles.actionText, isLiked && { color: '#e74c3c' }]}>{(item.likes || []).length}</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                        style={[styles.actionBtn, expandedComments[item._id] ? styles.actionBtnActive : {}]}
-                        onPress={() => toggleComments(item._id)}
-                    >
-                        <Ionicons name="chatbubble-outline" size={14} color={expandedComments[item._id] ? '#E5B505' : '#666'} />
-                        <Text style={styles.actionText}>{comments[item._id]?.length || 0}</Text>
-                    </TouchableOpacity>
-                </View>
-                {expandedComments[item._id] && renderCommentSection(item._id, 'list')}
+                {expandedComments[item._id] && renderCommentSection(item._id, 'Review')}
             </View>
         );
     };
 
-    const renderCommentSection = (targetId: string, targetType: 'review' | 'list') => {
+    // Render List Item
+    const renderList = ({ item, index }: { item: ListItem; index: number }) => {
+        const colors = ['#ff7675', '#74b9ff', '#55efc4', '#ffeaa7', '#a29bfe', '#fd79a8'];
+        const color = colors[index % colors.length];
+        const isLiked = user ? (item.likes || []).includes(user.id) : false;
+        const isDisliked = user ? (item.dislikes || []).includes(user.id) : false;
+        const isMyList = user && (item.user?._id === user.id || item.user?._id === (user as any)._id);
+        const isExpanded = expandedListId === item._id;
+        const displayItems = isExpanded ? (item.items || []) : (item.items || []).slice(0, 6);
+
+        return (
+            <View style={styles.listCard}>
+                <View style={styles.listHeaderRow}>
+                    <TouchableOpacity
+                        style={[styles.userBadge, { backgroundColor: color + '22', borderColor: color + '44' }]}
+                        activeOpacity={0.7}
+                        onPress={() => router.push(`/user/${item.user?._id}`)}
+                    >
+                        <Text style={[styles.userBadgeText, { color }]}>{item.user?.username || 'Kullanıcı'}</Text>
+                    </TouchableOpacity>
+                    {isMyList && (
+                        <TouchableOpacity onPress={() => handleDeleteList(item._id, item.name)} style={{ padding: 4 }}>
+                            <Ionicons name="trash-outline" size={18} color="#e74c3c" />
+                        </TouchableOpacity>
+                    )}
+                </View>
+
+                <Text style={styles.listName}>{item.name}</Text>
+                {item.description ? <Text style={styles.listDesc}>{item.description}</Text> : null}
+                <Text style={styles.listCount}>{item.items?.length || 0} içerik</Text>
+
+                {item.items && item.items.length > 0 && (
+                    <View style={{ marginTop: 12 }}>
+                        <FlatList
+                            data={displayItems}
+                            horizontal={!isExpanded}
+                            numColumns={isExpanded ? 3 : 1}
+                            key={isExpanded ? 'grid-3' : 'scroll-h'}
+                            showsHorizontalScrollIndicator={false}
+                            keyExtractor={(it, i) => `${it.tmdbId}-${i}`}
+                            renderItem={({ item: listItem }) => (
+                                <TouchableOpacity
+                                    onPress={() => router.push(`/content/${listItem.tmdbId}?type=${listItem.mediaType || 'movie'}`)}
+                                    activeOpacity={0.8}
+                                    style={isExpanded ? { margin: 4 } : { marginRight: 6 }}
+                                >
+                                    <Image source={{ uri: getImageUrl(listItem.posterPath, 'w92') }} style={styles.listPoster} />
+                                </TouchableOpacity>
+                            )}
+                        />
+                        {item.items.length > 6 && (
+                            <TouchableOpacity
+                                style={styles.expandListBtn}
+                                onPress={() => setExpandedListId(isExpanded ? null : item._id)}
+                            >
+                                <Text style={styles.expandListText}>
+                                    {isExpanded ? 'Daha Az Göster' : `Tümünü Gör (+${item.items.length - 6})`}
+                                </Text>
+                                <Ionicons name={isExpanded ? 'chevron-up' : 'chevron-down'} size={14} color="#E5B505" />
+                            </TouchableOpacity>
+                        )}
+                    </View>
+                )}
+
+                <View style={styles.listActions}>
+                    <TouchableOpacity
+                        style={[styles.actionBtn, isLiked && styles.actionBtnLiked]}
+                        onPress={() => handleReaction(item._id, 'list', 'like')}
+                        activeOpacity={0.7}
+                    >
+                        <Ionicons name={isLiked ? 'thumbs-up' : 'thumbs-up-outline'} size={13} color={isLiked ? '#2ecc71' : '#888'} />
+                        <Text style={[styles.actionText, isLiked && { color: '#2ecc71' }]}>{(item.likes || []).length}</Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                        style={[styles.actionBtn, isDisliked && styles.actionBtnDisliked]}
+                        onPress={() => handleReaction(item._id, 'list', 'dislike')}
+                        activeOpacity={0.7}
+                    >
+                        <Ionicons name={isDisliked ? 'thumbs-down' : 'thumbs-down-outline'} size={13} color={isDisliked ? '#e74c3c' : '#888'} />
+                        <Text style={[styles.actionText, isDisliked && { color: '#e74c3c' }]}>{(item.dislikes || []).length}</Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                        style={[styles.actionBtn, expandedComments[item._id] && styles.actionBtnActive]}
+                        onPress={() => toggleComments(item._id)}
+                        activeOpacity={0.7}
+                    >
+                        <Ionicons name="chatbubble-outline" size={13} color={expandedComments[item._id] ? '#E5B505' : '#888'} />
+                        <Text style={[styles.actionText, expandedComments[item._id] && { color: '#E5B505' }]}>
+                            {comments[item._id]?.length || 0}
+                        </Text>
+                    </TouchableOpacity>
+                </View>
+
+                {expandedComments[item._id] && renderCommentSection(item._id, 'List')}
+            </View>
+        );
+    };
+
+    // Render Comment Section
+    const renderCommentSection = (targetId: string, targetType: 'Review' | 'List') => {
         const itemComments = comments[targetId] || [];
         const isLoading = loadingComments[targetId];
 
@@ -276,34 +659,241 @@ export default function CommunityScreen() {
                         value={commentText[targetId] || ''}
                         onChangeText={(txt) => setCommentText(prev => ({ ...prev, [targetId]: txt }))}
                     />
-                    <TouchableOpacity 
+                    <TouchableOpacity
                         style={styles.sendBtn}
                         onPress={() => handleCommentSubmit(targetId, targetType)}
                     >
-                        <Ionicons name="send" size={16} color="#E5B505" />
+                        <Ionicons name="send" size={15} color="#000" />
                     </TouchableOpacity>
                 </View>
 
                 {isLoading ? (
                     <ActivityIndicator size="small" color="#E5B505" style={{ marginVertical: 10 }} />
+                ) : itemComments.length === 0 ? (
+                    <Text style={styles.noCommentsText}>İlk yorumu sen yaz!</Text>
                 ) : (
-                    itemComments.filter(c => c && c.user).map(c => (
-                        <View key={c._id} style={styles.commentCard}>
-                            <View style={styles.commentUserRow}>
-                                <View style={styles.commentAvatar}>
-                                    <Text style={styles.commentAvatarText}>{c.user?.username?.charAt(0).toUpperCase() || '?'}</Text>
+                    itemComments.filter(c => c && c.user).map(c => {
+                        const isMyComment = user && (c.user?._id === user.id || user.role === 'admin');
+                        const isLiked = user && (c.likes || []).includes(user.id);
+                        const isDisliked = user && (c.dislikes || []).includes(user.id);
+
+                        return (
+                            <View key={c._id} style={styles.commentCard}>
+                                <View style={styles.commentUserRow}>
+                                    <TouchableOpacity
+                                        style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}
+                                        onPress={() => router.push(`/user/${c.user?._id}`)}
+                                    >
+                                        <View style={styles.commentAvatar}>
+                                            <Text style={styles.commentAvatarText}>
+                                                {c.user?.username?.charAt(0).toUpperCase() || '?'}
+                                            </Text>
+                                        </View>
+                                        <Text style={styles.commentUsername}>{c.user?.username}</Text>
+                                    </TouchableOpacity>
+                                    <Text style={styles.commentTime}>{timeAgo(c.createdAt)}</Text>
                                 </View>
-                                <Text style={styles.commentUsername}>{c.user?.username}</Text>
-                                <TouchableOpacity onPress={() => setCommentText(prev => ({ ...prev, [targetId]: `@${c.user?.username} ` }))}>
-                                    <Text style={styles.replyText}>Yanıtla</Text>
-                                </TouchableOpacity>
-                                <Text style={styles.commentTime}>{timeAgo(c.createdAt)}</Text>
+
+                                <Text style={styles.commentContent}>{c.content}</Text>
+
+                                <View style={styles.commentActionsRow}>
+                                    <TouchableOpacity
+                                        style={styles.commentVoteBtn}
+                                        onPress={() => handleCommentReaction(c._id, targetId, 'like')}
+                                    >
+                                        <Ionicons name={isLiked ? 'thumbs-up' : 'thumbs-up-outline'} size={12} color={isLiked ? '#2ecc71' : '#777'} />
+                                        <Text style={[styles.commentVoteText, isLiked && { color: '#2ecc71' }]}>{(c.likes || []).length || 0}</Text>
+                                    </TouchableOpacity>
+
+                                    <TouchableOpacity
+                                        style={styles.commentVoteBtn}
+                                        onPress={() => handleCommentReaction(c._id, targetId, 'dislike')}
+                                    >
+                                        <Ionicons name={isDisliked ? 'thumbs-down' : 'thumbs-down-outline'} size={12} color={isDisliked ? '#e74c3c' : '#777'} />
+                                        <Text style={[styles.commentVoteText, isDisliked && { color: '#e74c3c' }]}>{(c.dislikes || []).length || 0}</Text>
+                                    </TouchableOpacity>
+
+                                    {isMyComment && (
+                                        <TouchableOpacity
+                                            style={{ marginLeft: 'auto', padding: 2 }}
+                                            onPress={() => handleDeleteComment(c._id, targetId)}
+                                        >
+                                            <Ionicons name="trash-outline" size={14} color="#e74c3c" />
+                                        </TouchableOpacity>
+                                    )}
+                                </View>
                             </View>
-                            <Text style={styles.commentContent}>{c.content}</Text>
-                        </View>
-                    ))
+                        );
+                    })
                 )}
             </View>
+        );
+    };
+
+    // Render Friend Feed Tab
+    const renderFriendFeed = () => {
+        if (!token) {
+            return (
+                <View style={styles.empty}>
+                    <Ionicons name="people-outline" size={48} color="#444" />
+                    <Text style={styles.emptyText}>Arkadaş hareketlerini görmek için giriş yapın</Text>
+                    <TouchableOpacity style={styles.loginBtnInline} onPress={() => router.push('/login')}>
+                        <Text style={styles.loginBtnText}>Giriş Yap</Text>
+                    </TouchableOpacity>
+                </View>
+            );
+        }
+
+        if (loadingFriends) {
+            return (
+                <View style={styles.empty}>
+                    <ActivityIndicator size="large" color="#E5B505" />
+                    <Text style={[styles.emptySubText, { marginTop: 12 }]}>Hareketler yükleniyor...</Text>
+                </View>
+            );
+        }
+
+        if (friendActivity.followingCount === 0) {
+            return (
+                <View style={styles.empty}>
+                    <Ionicons name="person-add-outline" size={48} color="#444" />
+                    <Text style={styles.emptyText}>Henüz kimseyi takip etmiyorsunuz</Text>
+                    <Text style={styles.emptySubText}>Topluluk sekmesindeki kullanıcıları takip ederek aktivitelerini burada görebilirsiniz.</Text>
+                </View>
+            );
+        }
+
+        return (
+            <ScrollView
+                refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#E5B505" />}
+                contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 100 }}
+            >
+                {/* Subtabs for Friend Activity */}
+                <View style={styles.friendSubTabs}>
+                    <TouchableOpacity
+                        style={[styles.friendSubTab, friendSubTab === 'lists' && styles.friendSubTabActive]}
+                        onPress={() => setFriendSubTab('lists')}
+                    >
+                        <Text style={[styles.friendSubTabText, friendSubTab === 'lists' && styles.friendSubTabTextActive]}>
+                            Listeler ({friendActivity.lists.length})
+                        </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                        style={[styles.friendSubTab, friendSubTab === 'comments' && styles.friendSubTabActive]}
+                        onPress={() => setFriendSubTab('comments')}
+                    >
+                        <Text style={[styles.friendSubTabText, friendSubTab === 'comments' && styles.friendSubTabTextActive]}>
+                            Yorumlar ({friendActivity.comments.length})
+                        </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                        style={[styles.friendSubTab, friendSubTab === 'reactions' && styles.friendSubTabActive]}
+                        onPress={() => setFriendSubTab('reactions')}
+                    >
+                        <Text style={[styles.friendSubTabText, friendSubTab === 'reactions' && styles.friendSubTabTextActive]}>
+                            Tepkiler ({friendActivity.likedContent.length})
+                        </Text>
+                    </TouchableOpacity>
+                </View>
+
+                {friendSubTab === 'reactions' && (
+                    <View style={styles.polarityFilterRow}>
+                        <TouchableOpacity
+                            style={[styles.pillBtn, friendReactionFilter === 'all' && styles.pillBtnActive]}
+                            onPress={() => setFriendReactionFilter('all')}
+                        >
+                            <Text style={[styles.pillBtnText, friendReactionFilter === 'all' && styles.pillBtnTextActive]}>Tümü</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            style={[styles.pillBtn, friendReactionFilter === 'likes' && styles.pillBtnActive]}
+                            onPress={() => setFriendReactionFilter('likes')}
+                        >
+                            <Text style={[styles.pillBtnText, friendReactionFilter === 'likes' && styles.pillBtnTextActive]}>👍 Beğeniler</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            style={[styles.pillBtn, friendReactionFilter === 'dislikes' && styles.pillBtnActive]}
+                            onPress={() => setFriendReactionFilter('dislikes')}
+                        >
+                            <Text style={[styles.pillBtnText, friendReactionFilter === 'dislikes' && styles.pillBtnTextActive]}>👎 Dislike'lar</Text>
+                        </TouchableOpacity>
+                    </View>
+                )}
+
+                {/* Subtab Contents */}
+                {friendSubTab === 'lists' && (
+                    friendActivity.lists.length === 0 ? (
+                        <Text style={styles.emptyFeedText}>Takip ettikleriniz henüz bir liste oluşturmamış.</Text>
+                    ) : (
+                        friendActivity.lists.map((l: any, idx: number) => renderList({ item: l, index: idx }))
+                    )
+                )}
+
+                {friendSubTab === 'comments' && (
+                    friendActivity.comments.length === 0 ? (
+                        <Text style={styles.emptyFeedText}>Takip ettikleriniz henüz bir yorum yapmamış.</Text>
+                    ) : (
+                        friendActivity.comments.map((c: any) => (
+                            <View key={c._id} style={styles.feedCard}>
+                                <TouchableOpacity
+                                    style={styles.feedActorRow}
+                                    onPress={() => router.push(`/user/${c.user?._id}`)}
+                                >
+                                    <View style={styles.userAvatar}>
+                                        <Text style={styles.userAvatarText}>{c.user?.username?.charAt(0).toUpperCase() || '?'}</Text>
+                                    </View>
+                                    <Text style={styles.feedActorName}>{c.user?.username}</Text>
+                                    <Text style={styles.feedActionText}>bir yorum yaptı</Text>
+                                    <Text style={styles.timeText}>{timeAgo(c.createdAt)}</Text>
+                                </TouchableOpacity>
+                                <Text style={styles.commentContent}>{c.content}</Text>
+                            </View>
+                        ))
+                    )
+                )}
+
+                {friendSubTab === 'reactions' && (
+                    friendActivity.likedContent
+                        .filter((item: any) => {
+                            if (friendReactionFilter === 'likes') return item.action === 'like' || item.isLiked;
+                            if (friendReactionFilter === 'dislikes') return item.action === 'dislike' || item.isDisliked;
+                            return true;
+                        })
+                        .map((item: any, i: number) => (
+                            <View key={item._id || i} style={styles.feedCard}>
+                                <View style={styles.feedActorRow}>
+                                    <TouchableOpacity
+                                        style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}
+                                        onPress={() => router.push(`/user/${item.user?._id || item.actor?._id}`)}
+                                    >
+                                        <View style={styles.userAvatar}>
+                                            <Text style={styles.userAvatarText}>
+                                                {(item.actor?.username || item.user?.username)?.charAt(0).toUpperCase() || '?'}
+                                            </Text>
+                                        </View>
+                                        <Text style={styles.feedActorName}>{item.actor?.username || item.user?.username}</Text>
+                                    </TouchableOpacity>
+                                    <Text style={styles.feedActionText}>
+                                        {item.action === 'dislike' ? 'bunu beğenmedi (dislike)' : 'bunu beğendi'}
+                                    </Text>
+                                    <Text style={styles.timeText}>{timeAgo(item.createdAt)}</Text>
+                                </View>
+                                {item.movieTitle ? (
+                                    <TouchableOpacity
+                                        onPress={() => router.push(`/content/${item.tmdbId}?type=${item.mediaType || 'movie'}`)}
+                                        style={{ marginTop: 6 }}
+                                    >
+                                        <Text style={styles.movieTitle}>{item.movieTitle}</Text>
+                                        {item.reviewText ? <Text style={styles.reviewText}>"{item.reviewText}"</Text> : null}
+                                    </TouchableOpacity>
+                                ) : item.name ? (
+                                    <Text style={styles.listName}>{item.name}</Text>
+                                ) : (
+                                    <Text style={styles.commentContent}>{item.content}</Text>
+                                )}
+                            </View>
+                        ))
+                )}
+            </ScrollView>
         );
     };
 
@@ -323,9 +913,6 @@ export default function CommunityScreen() {
                 <Text style={{ color: '#888', fontSize: 16, fontWeight: '600', marginTop: 16, textAlign: 'center' }}>
                     Sunucuya bağlanılamadı
                 </Text>
-                <Text style={{ color: '#555', fontSize: 13, marginTop: 8, textAlign: 'center' }}>
-                    Backend sunucusunun çalıştığından emin olun
-                </Text>
                 <TouchableOpacity
                     style={{ backgroundColor: '#E5B505', borderRadius: 12, paddingVertical: 12, paddingHorizontal: 32, marginTop: 20 }}
                     onPress={() => { setLoading(true); fetchData(); }}
@@ -340,31 +927,73 @@ export default function CommunityScreen() {
         <View style={styles.container}>
             <View style={styles.header}>
                 <Text style={styles.headerTitle}>Topluluk Merkezi</Text>
-                <Text style={styles.headerSubtitle}>Diğer RateFlix üyelerinin incelemeleri ve listelerini keşfedin</Text>
+                <Text style={styles.headerSubtitle}>İncelemeler, özel listeler ve arkadaş hareketleri</Text>
             </View>
 
+            {/* 3 Main Tabs */}
             <View style={styles.tabsRow}>
                 <TouchableOpacity
                     style={[styles.tab, activeTab === 'reviews' && styles.tabActive]}
                     onPress={() => setActiveTab('reviews')}
                     activeOpacity={0.7}
                 >
-                    <Ionicons name="star" size={16} color={activeTab === 'reviews' ? '#000' : '#888'} />
+                    <Ionicons name="star" size={15} color={activeTab === 'reviews' ? '#000' : '#888'} />
                     <Text style={[styles.tabText, activeTab === 'reviews' && styles.tabTextActive]}>İncelemeler</Text>
                 </TouchableOpacity>
+
                 <TouchableOpacity
                     style={[styles.tab, activeTab === 'lists' && styles.tabActive]}
                     onPress={() => setActiveTab('lists')}
                     activeOpacity={0.7}
                 >
-                    <Ionicons name="list" size={16} color={activeTab === 'lists' ? '#000' : '#888'} />
+                    <Ionicons name="list" size={15} color={activeTab === 'lists' ? '#000' : '#888'} />
                     <Text style={[styles.tabText, activeTab === 'lists' && styles.tabTextActive]}>Listeler</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                    style={[styles.tab, activeTab === 'friends' && styles.tabActive]}
+                    onPress={() => setActiveTab('friends')}
+                    activeOpacity={0.7}
+                >
+                    <Ionicons name="people" size={15} color={activeTab === 'friends' ? '#000' : '#888'} />
+                    <Text style={[styles.tabText, activeTab === 'friends' && styles.tabTextActive]}>Takip Edilenler</Text>
                 </TouchableOpacity>
             </View>
 
+            {/* Search and Sort Toolbar (Available on Reviews & Lists) */}
+            {activeTab !== 'friends' && (
+                <View style={styles.toolbarRow}>
+                    <View style={styles.searchWrapper}>
+                        <Ionicons name="search" size={16} color="#777" style={{ marginRight: 8 }} />
+                        <TextInput
+                            style={styles.searchInput}
+                            placeholder={activeTab === 'reviews' ? 'Film, inceleme veya kullanıcı ara...' : 'Liste veya kullanıcı ara...'}
+                            placeholderTextColor="#555"
+                            value={searchQuery}
+                            onChangeText={setSearchQuery}
+                        />
+                        {searchQuery.length > 0 && (
+                            <TouchableOpacity onPress={() => setSearchQuery('')}>
+                                <Ionicons name="close-circle" size={16} color="#777" />
+                            </TouchableOpacity>
+                        )}
+                    </View>
+
+                    <TouchableOpacity
+                        style={styles.sortBtn}
+                        onPress={() => setShowSortModal(true)}
+                        activeOpacity={0.8}
+                    >
+                        <Ionicons name="funnel-outline" size={16} color="#E5B505" />
+                        <Text style={styles.sortBtnText}>{getSortTitle(sortBy)}</Text>
+                    </TouchableOpacity>
+                </View>
+            )}
+
+            {/* Tab Contents */}
             {activeTab === 'reviews' ? (
                 <FlatList
-                    data={reviews}
+                    data={filteredReviews}
                     keyExtractor={(item) => item._id}
                     renderItem={renderReview}
                     refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#E5B505" />}
@@ -373,14 +1002,14 @@ export default function CommunityScreen() {
                     ListEmptyComponent={
                         <View style={styles.empty}>
                             <Ionicons name="chatbubbles-outline" size={48} color="#333" />
-                            <Text style={styles.emptyText}>Henüz inceleme bulunmuyor</Text>
-                            <Text style={styles.emptySubText}>İlk incelemeyi siz yapın!</Text>
+                            <Text style={styles.emptyText}>İnceleme bulunamadı</Text>
+                            <Text style={styles.emptySubText}>Arama kriterlerinizi değiştirmeyi deneyin</Text>
                         </View>
                     }
                 />
-            ) : (
+            ) : activeTab === 'lists' ? (
                 <FlatList
-                    data={lists}
+                    data={filteredLists}
                     keyExtractor={(item) => item._id}
                     renderItem={renderList}
                     refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#E5B505" />}
@@ -389,12 +1018,93 @@ export default function CommunityScreen() {
                     ListEmptyComponent={
                         <View style={styles.empty}>
                             <Ionicons name="albums-outline" size={48} color="#333" />
-                            <Text style={styles.emptyText}>Herkese açık liste bulunmuyor</Text>
-                            <Text style={styles.emptySubText}>Listelerinizi herkese açık yaparak paylaşın!</Text>
+                            <Text style={styles.emptyText}>Liste bulunamadı</Text>
+                            <Text style={styles.emptySubText}>Arama kriterlerinizi değiştirmeyi deneyin</Text>
                         </View>
                     }
                 />
+            ) : (
+                renderFriendFeed()
             )}
+
+            {/* Sort Selection Modal */}
+            <Modal visible={showSortModal} transparent animationType="fade">
+                <TouchableOpacity style={styles.modalBackdrop} activeOpacity={1} onPress={() => setShowSortModal(false)}>
+                    <View style={styles.modalSheet}>
+                        <Text style={styles.modalSheetTitle}>Sıralama Seçin</Text>
+                        {[
+                            { key: 'newest', title: 'En Yeni' },
+                            { key: 'oldest', title: 'En Eski' },
+                            { key: 'most_liked', title: 'En Çok Beğenilen' },
+                            { key: 'most_disliked', title: 'En Çok Dislike' },
+                            { key: 'most_commented', title: 'En Çok Yorum' },
+                            ...(activeTab === 'reviews' ? [{ key: 'highest_rated', title: 'En Yüksek Puan' }] : [])
+                        ].map((opt) => (
+                            <TouchableOpacity
+                                key={opt.key}
+                                style={[styles.sortOption, sortBy === opt.key && styles.sortOptionSelected]}
+                                onPress={() => { setSortBy(opt.key as any); setShowSortModal(false); }}
+                            >
+                                <Text style={[styles.sortOptionText, sortBy === opt.key && styles.sortOptionTextSelected]}>
+                                    {opt.title}
+                                </Text>
+                                {sortBy === opt.key && <Ionicons name="checkmark" size={18} color="#E5B505" />}
+                            </TouchableOpacity>
+                        ))}
+                    </View>
+                </TouchableOpacity>
+            </Modal>
+
+            {/* Review Edit Modal */}
+            <Modal visible={!!editingReview} transparent animationType="slide">
+                <View style={styles.modalBackdrop}>
+                    <View style={styles.editReviewModal}>
+                        <Text style={styles.modalSheetTitle}>İncelemeyi Düzenle</Text>
+                        <Text style={styles.editMovieTitle}>{editingReview?.movieTitle}</Text>
+
+                        {/* Stars */}
+                        <View style={styles.editStarsRow}>
+                            {[1, 2, 3, 4, 5].map(star => (
+                                <TouchableOpacity key={star} onPress={() => setEditRating(star)}>
+                                    <Ionicons name={star <= editRating ? 'star' : 'star-outline'} size={32} color="#E5B505" />
+                                </TouchableOpacity>
+                            ))}
+                        </View>
+
+                        {/* Text */}
+                        <TextInput
+                            style={styles.editTextInput}
+                            multiline
+                            numberOfLines={4}
+                            value={editText}
+                            onChangeText={setEditText}
+                            placeholder="Yorumunuzu güncelleyin..."
+                            placeholderTextColor="#555"
+                        />
+
+                        {/* Actions */}
+                        <View style={styles.editModalActions}>
+                            <TouchableOpacity
+                                style={styles.cancelBtn}
+                                onPress={() => setEditingReview(null)}
+                            >
+                                <Text style={styles.cancelBtnText}>Vazgeç</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                                style={styles.saveBtn}
+                                onPress={handleSaveEditReview}
+                                disabled={submittingEdit}
+                            >
+                                {submittingEdit ? (
+                                    <ActivityIndicator color="#000" />
+                                ) : (
+                                    <Text style={styles.saveBtnText}>Kaydet</Text>
+                                )}
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </View>
+            </Modal>
         </View>
     );
 }
@@ -404,69 +1114,170 @@ const styles = StyleSheet.create({
     header: { paddingHorizontal: 20, paddingTop: 60, paddingBottom: 8 },
     headerTitle: { fontSize: 28, fontWeight: '800', color: '#fff', marginBottom: 4 },
     headerSubtitle: { color: '#888', fontSize: 13, lineHeight: 18 },
-    tabsRow: { flexDirection: 'row', paddingHorizontal: 16, paddingVertical: 14, gap: 10 },
+
+    // Tabs
+    tabsRow: { flexDirection: 'row', paddingHorizontal: 16, paddingVertical: 12, gap: 8 },
     tab: {
         flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
-        paddingVertical: 10, borderRadius: 25,
-        backgroundColor: 'rgba(255,255,255,0.05)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)',
+        paddingVertical: 10, borderRadius: 20,
+        backgroundColor: 'rgba(255,255,255,0.04)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)',
     },
     tabActive: { backgroundColor: '#E5B505', borderColor: '#E5B505' },
-    tabText: { color: '#888', fontSize: 14, fontWeight: '600' },
-    tabTextActive: { color: '#000' },
+    tabText: { color: '#888', fontSize: 13, fontWeight: '600' },
+    tabTextActive: { color: '#000', fontWeight: '700' },
+
+    // Toolbar
+    toolbarRow: { flexDirection: 'row', paddingHorizontal: 16, marginBottom: 12, gap: 10, alignItems: 'center' },
+    searchWrapper: {
+        flex: 1, flexDirection: 'row', alignItems: 'center',
+        backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 12,
+        paddingHorizontal: 12, height: 40, borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)'
+    },
+    searchInput: { flex: 1, color: '#fff', fontSize: 13, padding: 0 },
+    sortBtn: {
+        flexDirection: 'row', alignItems: 'center', gap: 6,
+        paddingHorizontal: 12, height: 40, borderRadius: 12,
+        backgroundColor: 'rgba(229,181,5,0.1)', borderWidth: 1, borderColor: 'rgba(229,181,5,0.2)'
+    },
+    sortBtnText: { color: '#E5B505', fontSize: 12, fontWeight: '700' },
+
+    // Review Card
     reviewCard: {
         backgroundColor: 'rgba(255,255,255,0.04)', borderRadius: 14, padding: 14,
         borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)',
     },
     reviewRow: { flexDirection: 'row', gap: 12 },
-    reviewPoster: { width: 65, height: 97, borderRadius: 8, backgroundColor: '#1a1a1a' },
+    reviewPoster: { width: 68, height: 102, borderRadius: 8, backgroundColor: '#1a1a1a' },
     reviewContent: { flex: 1 },
-    userRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 },
+    reviewTopRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 },
+    userRow: { flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1 },
     userAvatar: {
-        width: 24, height: 24, borderRadius: 12, backgroundColor: '#E5B505',
+        width: 22, height: 22, borderRadius: 11, backgroundColor: '#E5B505',
         alignItems: 'center', justifyContent: 'center',
     },
-    userAvatarText: { color: '#000', fontSize: 11, fontWeight: '800' },
-    userName: { color: '#fff', fontSize: 13, fontWeight: '600', flex: 1 },
-    timeText: { color: '#555', fontSize: 11 },
-    movieTitle: { color: '#aaa', fontSize: 13, fontWeight: '600', marginBottom: 4 },
+    userAvatarText: { color: '#000', fontSize: 10, fontWeight: '800' },
+    userName: { color: '#fff', fontSize: 13, fontWeight: '600', flexShrink: 1 },
+    timeText: { color: '#666', fontSize: 11 },
+    movieTitle: { color: '#E5B505', fontSize: 14, fontWeight: '700', marginBottom: 4 },
     starsRow: { flexDirection: 'row', gap: 1, marginBottom: 6 },
-    reviewText: { color: '#bbb', fontSize: 13, fontStyle: 'italic', lineHeight: 18 },
-    reviewTextEmpty: { color: '#555', fontSize: 12, fontStyle: 'italic' },
-    actionsRow: { flexDirection: 'row', marginTop: 8, gap: 10 },
+    reviewText: { color: '#ccc', fontSize: 13, lineHeight: 18, marginBottom: 6 },
+    reviewTextEmpty: { color: '#666', fontSize: 12, fontStyle: 'italic', marginBottom: 6 },
+
+    // Actions
+    actionsRow: { flexDirection: 'row', marginTop: 4, gap: 8, alignItems: 'center' },
     actionBtn: {
-        flexDirection: 'row', alignItems: 'center', gap: 6,
-        paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16,
+        flexDirection: 'row', alignItems: 'center', gap: 4,
+        paddingHorizontal: 10, paddingVertical: 5, borderRadius: 12,
         backgroundColor: 'rgba(255,255,255,0.05)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)',
     },
-    actionBtnActive: { backgroundColor: 'rgba(229,181,5,0.1)', borderColor: 'rgba(229,181,5,0.2)' },
-    actionText: { color: '#666', fontSize: 12, fontWeight: '700' },
-    commentSection: { marginTop: 12, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.05)', paddingTop: 12 },
-    commentInputRow: { flexDirection: 'row', gap: 8, marginBottom: 12 },
-    commentInput: { flex: 1, height: 36, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 18, paddingHorizontal: 16, color: '#fff', fontSize: 13 },
-    sendBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(229,181,5,0.1)', alignItems: 'center', justifyContent: 'center' },
-    commentCard: { marginBottom: 12, backgroundColor: 'rgba(255,255,255,0.02)', padding: 10, borderRadius: 10 },
-    commentUserRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 },
+    actionBtnLiked: { backgroundColor: 'rgba(46, 204, 113, 0.1)', borderColor: 'rgba(46, 204, 113, 0.3)' },
+    actionBtnDisliked: { backgroundColor: 'rgba(231, 76, 60, 0.1)', borderColor: 'rgba(231, 76, 60, 0.3)' },
+    actionBtnActive: { backgroundColor: 'rgba(229,181,5,0.1)', borderColor: 'rgba(229,181,5,0.3)' },
+    actionText: { color: '#888', fontSize: 12, fontWeight: '700' },
+    ownerActions: { flexDirection: 'row', marginLeft: 'auto', gap: 8 },
+    iconMiniBtn: { padding: 4 },
+
+    // Comments Section
+    commentSection: { marginTop: 12, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.06)', paddingTop: 10 },
+    commentInputRow: { flexDirection: 'row', gap: 8, marginBottom: 10 },
+    commentInput: {
+        flex: 1, height: 36, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 18,
+        paddingHorizontal: 14, color: '#fff', fontSize: 13, borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)'
+    },
+    sendBtn: {
+        width: 36, height: 36, borderRadius: 18, backgroundColor: '#E5B505',
+        alignItems: 'center', justifyContent: 'center'
+    },
+    noCommentsText: { color: '#666', fontSize: 12, fontStyle: 'italic', textAlign: 'center', marginVertical: 6 },
+    commentCard: {
+        marginBottom: 8, backgroundColor: 'rgba(255,255,255,0.02)', padding: 10, borderRadius: 10,
+        borderWidth: 1, borderColor: 'rgba(255,255,255,0.04)'
+    },
+    commentUserRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 },
     commentAvatar: { width: 18, height: 18, borderRadius: 9, backgroundColor: '#E5B505', alignItems: 'center', justifyContent: 'center' },
-    commentAvatarText: { color: '#000', fontSize: 10, fontWeight: '800' },
+    commentAvatarText: { color: '#000', fontSize: 9, fontWeight: '800' },
     commentUsername: { color: '#fff', fontSize: 12, fontWeight: '600' },
-    replyText: { color: '#E5B505', fontSize: 10, fontWeight: '700', marginLeft: 4 },
-    commentTime: { color: '#555', fontSize: 10, flex: 1, textAlign: 'right' },
-    commentContent: { color: '#aaa', fontSize: 12, lineHeight: 18 },
+    commentTime: { color: '#555', fontSize: 10 },
+    commentContent: { color: '#ccc', fontSize: 12, lineHeight: 17, marginBottom: 4 },
+    commentActionsRow: { flexDirection: 'row', gap: 12, alignItems: 'center' },
+    commentVoteBtn: { flexDirection: 'row', alignItems: 'center', gap: 3 },
+    commentVoteText: { color: '#777', fontSize: 10, fontWeight: '700' },
+
+    // List Card
     listCard: {
         backgroundColor: 'rgba(255,255,255,0.04)', borderRadius: 14, padding: 16,
         borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)',
     },
+    listHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
     userBadge: {
-        alignSelf: 'flex-start', paddingHorizontal: 10, paddingVertical: 4,
-        borderRadius: 8, borderWidth: 1, marginBottom: 10,
+        paddingHorizontal: 8, paddingVertical: 3,
+        borderRadius: 6, borderWidth: 1,
     },
-    userBadgeText: { fontSize: 12, fontWeight: '700' },
-    listName: { color: '#fff', fontSize: 18, fontWeight: '700', marginBottom: 4 },
-    listDesc: { color: '#888', fontSize: 13, fontStyle: 'italic', marginBottom: 4 },
+    userBadgeText: { fontSize: 11, fontWeight: '700' },
+    listName: { color: '#fff', fontSize: 17, fontWeight: '700', marginBottom: 4 },
+    listDesc: { color: '#888', fontSize: 12, fontStyle: 'italic', marginBottom: 4 },
     listCount: { color: '#666', fontSize: 12 },
-    listPoster: { width: 50, height: 75, borderRadius: 6, backgroundColor: '#1a1a1a' },
-    listActions: { flexDirection: 'row', marginTop: 12, gap: 10 },
-    empty: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingTop: 80 },
-    emptyText: { color: '#888', fontSize: 16, fontWeight: '600', marginTop: 12 },
-    emptySubText: { color: '#555', fontSize: 13, marginTop: 6 },
+    listPoster: { width: 60, height: 90, borderRadius: 6, backgroundColor: '#1a1a1a' },
+    expandListBtn: {
+        flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+        paddingVertical: 8, marginTop: 6, gap: 4
+    },
+    expandListText: { color: '#E5B505', fontSize: 12, fontWeight: '700' },
+    listActions: { flexDirection: 'row', marginTop: 12, gap: 8 },
+
+    // Friend Feed
+    friendSubTabs: { flexDirection: 'row', gap: 8, marginVertical: 12 },
+    friendSubTab: {
+        flex: 1, paddingVertical: 8, borderRadius: 10, alignItems: 'center',
+        backgroundColor: 'rgba(255,255,255,0.04)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)'
+    },
+    friendSubTabActive: { backgroundColor: 'rgba(229,181,5,0.15)', borderColor: '#E5B505' },
+    friendSubTabText: { color: '#888', fontSize: 12, fontWeight: '600' },
+    friendSubTabTextActive: { color: '#E5B505', fontWeight: '700' },
+    polarityFilterRow: { flexDirection: 'row', gap: 8, marginBottom: 12 },
+    pillBtn: {
+        paddingHorizontal: 12, paddingVertical: 6, borderRadius: 14,
+        backgroundColor: 'rgba(255,255,255,0.04)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)'
+    },
+    pillBtnActive: { backgroundColor: '#E5B505', borderColor: '#E5B505' },
+    pillBtnText: { color: '#888', fontSize: 12, fontWeight: '600' },
+    pillBtnTextActive: { color: '#000', fontWeight: '700' },
+    feedCard: {
+        backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: 12, padding: 12, marginBottom: 10,
+        borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)'
+    },
+    feedActorRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 6 },
+    feedActorName: { color: '#fff', fontSize: 13, fontWeight: '700' },
+    feedActionText: { color: '#888', fontSize: 12, flex: 1 },
+    emptyFeedText: { color: '#666', fontSize: 13, fontStyle: 'italic', textAlign: 'center', marginVertical: 20 },
+
+    // Empty State
+    empty: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingTop: 60, paddingHorizontal: 20 },
+    emptyText: { color: '#888', fontSize: 15, fontWeight: '600', marginTop: 12, textAlign: 'center' },
+    emptySubText: { color: '#555', fontSize: 12, marginTop: 4, textAlign: 'center' },
+    loginBtnInline: { backgroundColor: '#E5B505', paddingHorizontal: 24, paddingVertical: 10, borderRadius: 10, marginTop: 16 },
+    loginBtnText: { color: '#000', fontWeight: '700', fontSize: 14 },
+
+    // Modals
+    modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.75)', justifyContent: 'center', padding: 20 },
+    modalSheet: { backgroundColor: '#181818', borderRadius: 16, padding: 20, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' },
+    modalSheetTitle: { color: '#fff', fontSize: 18, fontWeight: '700', marginBottom: 14, textAlign: 'center' },
+    sortOption: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.06)' },
+    sortOptionSelected: { backgroundColor: 'rgba(229,181,5,0.05)', borderRadius: 8, paddingHorizontal: 8 },
+    sortOptionText: { color: '#bbb', fontSize: 14 },
+    sortOptionTextSelected: { color: '#E5B505', fontWeight: '700' },
+
+    editReviewModal: { backgroundColor: '#181818', borderRadius: 16, padding: 20, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' },
+    editMovieTitle: { color: '#E5B505', fontSize: 15, fontWeight: '600', textAlign: 'center', marginBottom: 12 },
+    editStarsRow: { flexDirection: 'row', justifyContent: 'center', gap: 8, marginBottom: 16 },
+    editTextInput: {
+        backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 12, padding: 12,
+        color: '#fff', fontSize: 14, minHeight: 90, textAlignVertical: 'top',
+        borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)', marginBottom: 16
+    },
+    editModalActions: { flexDirection: 'row', gap: 10, justifyContent: 'flex-end' },
+    cancelBtn: { paddingVertical: 10, paddingHorizontal: 16, borderRadius: 10 },
+    cancelBtnText: { color: '#888', fontWeight: '600' },
+    saveBtn: { backgroundColor: '#E5B505', paddingVertical: 10, paddingHorizontal: 20, borderRadius: 10 },
+    saveBtnText: { color: '#000', fontWeight: '700' }
 });

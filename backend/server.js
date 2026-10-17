@@ -28,7 +28,8 @@ const allowedOrigins = [
     'http://localhost:5173',
     'http://localhost:3000',
     'http://localhost:4173',
-    'https://rateflix-backend.onrender.com'
+    'https://rateflix-backend.onrender.com',
+    'https://rateflix01.vercel.app'
 ].filter(Boolean);
 
 app.use(cors({
