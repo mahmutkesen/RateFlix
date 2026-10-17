@@ -730,8 +730,70 @@ export default function CommunityScreen() {
         );
     };
 
-    // Render Friend Feed Tab
-    const renderFriendFeed = () => {
+    // Client-side text filter helper for friend activity sub-tabs in mobile
+    const filterFriendItem = (item: any) => {
+        if (!searchQuery) return true;
+        const q = searchQuery.toLowerCase().trim();
+        const qTr = searchQuery.toLocaleLowerCase('tr-TR').trim();
+
+        const matchText = (val: any) => {
+            if (!val) return false;
+            const str = String(val);
+            const lower = str.toLowerCase();
+            const lowerTr = str.toLocaleLowerCase('tr-TR');
+            return lower.includes(q) || lowerTr.includes(qTr) || lower.includes(qTr) || lowerTr.includes(q);
+        };
+
+        const username = item.user?.username || '';
+        const likedFriendMatch = (item.likedByFriends || []).some((f: any) => 
+            matchText(typeof f === 'string' ? f : f?.username)
+        );
+        const dislikedFriendMatch = (item.dislikedByFriends || []).some((f: any) => 
+            matchText(typeof f === 'string' ? f : f?.username)
+        );
+        const actorMatch = matchText(item.actor?.username || item.friend?.username);
+        const title = item.movieTitle || item.name || item.title || '';
+        const text = item.reviewText || item.description || item.content || '';
+        const itemsText = (item.items || []).map((i: any) => i.title || i.name || '').join(' ');
+
+        return matchText(username) || 
+               likedFriendMatch || 
+               dislikedFriendMatch || 
+               actorMatch || 
+               matchText(title) || 
+               matchText(text) || 
+               matchText(itemsText);
+    };
+
+    // Auto-switch friend subtab when search query has results in another subtab on mobile
+    useEffect(() => {
+        if (!searchQuery || activeTab !== 'friends') return;
+        const listsCount = friendActivity.lists.filter(filterFriendItem).length;
+        const commentsCount = friendActivity.comments.filter(filterFriendItem).length;
+        const likedCount = friendActivity.likedContent.filter(filterFriendItem).length;
+
+        if (friendSubTab === 'lists' && listsCount === 0) {
+            if (likedCount > 0) {
+                setFriendSubTab('reactions');
+            } else if (commentsCount > 0) {
+                setFriendSubTab('comments');
+            }
+        } else if (friendSubTab === 'comments' && commentsCount === 0) {
+            if (likedCount > 0) {
+                setFriendSubTab('reactions');
+            } else if (listsCount > 0) {
+                setFriendSubTab('lists');
+            }
+        } else if (friendSubTab === 'reactions' && likedCount === 0) {
+            if (listsCount > 0) {
+                setFriendSubTab('lists');
+            } else if (commentsCount > 0) {
+                setFriendSubTab('comments');
+            }
+        }
+    }, [searchQuery, activeTab, friendActivity]);
+
+    const renderFriendActivity = () => {
         if (!token) {
             return (
                 <View style={styles.empty}>
@@ -763,6 +825,10 @@ export default function CommunityScreen() {
             );
         }
 
+        const filteredLists = friendActivity.lists.filter(filterFriendItem);
+        const filteredComments = friendActivity.comments.filter(filterFriendItem);
+        const filteredReactions = friendActivity.likedContent.filter(filterFriendItem);
+
         return (
             <ScrollView
                 refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#E5B505" />}
@@ -775,7 +841,7 @@ export default function CommunityScreen() {
                         onPress={() => setFriendSubTab('lists')}
                     >
                         <Text style={[styles.friendSubTabText, friendSubTab === 'lists' && styles.friendSubTabTextActive]}>
-                            Listeler ({friendActivity.lists.length})
+                            Listeler ({filteredLists.length})
                         </Text>
                     </TouchableOpacity>
                     <TouchableOpacity
@@ -783,7 +849,7 @@ export default function CommunityScreen() {
                         onPress={() => setFriendSubTab('comments')}
                     >
                         <Text style={[styles.friendSubTabText, friendSubTab === 'comments' && styles.friendSubTabTextActive]}>
-                            Yorumlar ({friendActivity.comments.length})
+                            Yorumlar ({filteredComments.length})
                         </Text>
                     </TouchableOpacity>
                     <TouchableOpacity
@@ -791,7 +857,7 @@ export default function CommunityScreen() {
                         onPress={() => setFriendSubTab('reactions')}
                     >
                         <Text style={[styles.friendSubTabText, friendSubTab === 'reactions' && styles.friendSubTabTextActive]}>
-                            Tepkiler ({friendActivity.likedContent.length})
+                            Tepkiler ({filteredReactions.length})
                         </Text>
                     </TouchableOpacity>
                 </View>
@@ -802,37 +868,43 @@ export default function CommunityScreen() {
                             style={[styles.pillBtn, friendReactionFilter === 'all' && styles.pillBtnActive]}
                             onPress={() => setFriendReactionFilter('all')}
                         >
-                            <Text style={[styles.pillBtnText, friendReactionFilter === 'all' && styles.pillBtnTextActive]}>Tümü</Text>
+                            <Text style={[styles.pillBtnText, friendReactionFilter === 'all' && styles.pillBtnTextActive]}>
+                                Tümü ({filteredReactions.length})
+                            </Text>
                         </TouchableOpacity>
                         <TouchableOpacity
                             style={[styles.pillBtn, friendReactionFilter === 'likes' && styles.pillBtnActive]}
                             onPress={() => setFriendReactionFilter('likes')}
                         >
-                            <Text style={[styles.pillBtnText, friendReactionFilter === 'likes' && styles.pillBtnTextActive]}>👍 Beğeniler</Text>
+                            <Text style={[styles.pillBtnText, friendReactionFilter === 'likes' && styles.pillBtnTextActive]}>
+                                👍 Beğeniler ({filteredReactions.filter((i: any) => (i.likedByFriends || []).length > 0).length})
+                            </Text>
                         </TouchableOpacity>
                         <TouchableOpacity
                             style={[styles.pillBtn, friendReactionFilter === 'dislikes' && styles.pillBtnActive]}
                             onPress={() => setFriendReactionFilter('dislikes')}
                         >
-                            <Text style={[styles.pillBtnText, friendReactionFilter === 'dislikes' && styles.pillBtnTextActive]}>👎 Dislike'lar</Text>
+                            <Text style={[styles.pillBtnText, friendReactionFilter === 'dislikes' && styles.pillBtnTextActive]}>
+                                👎 Dislike'lar ({filteredReactions.filter((i: any) => (i.dislikedByFriends || []).length > 0).length})
+                            </Text>
                         </TouchableOpacity>
                     </View>
                 )}
 
                 {/* Subtab Contents */}
                 {friendSubTab === 'lists' && (
-                    friendActivity.lists.length === 0 ? (
+                    filteredLists.length === 0 ? (
                         <Text style={styles.emptyFeedText}>Takip ettikleriniz henüz bir liste oluşturmamış.</Text>
                     ) : (
-                        friendActivity.lists.map((l: any, idx: number) => renderList({ item: l, index: idx }))
+                        filteredLists.map((l: any, idx: number) => renderList({ item: l, index: idx }))
                     )
                 )}
 
                 {friendSubTab === 'comments' && (
-                    friendActivity.comments.length === 0 ? (
+                    filteredComments.length === 0 ? (
                         <Text style={styles.emptyFeedText}>Takip ettikleriniz henüz bir yorum yapmamış.</Text>
                     ) : (
-                        friendActivity.comments.map((c: any) => (
+                        filteredComments.map((c: any) => (
                             <View key={c._id} style={styles.feedCard}>
                                 <TouchableOpacity
                                     style={styles.feedActorRow}
@@ -852,46 +924,55 @@ export default function CommunityScreen() {
                 )}
 
                 {friendSubTab === 'reactions' && (
-                    friendActivity.likedContent
+                    filteredReactions
                         .filter((item: any) => {
-                            if (friendReactionFilter === 'likes') return item.action === 'like' || item.isLiked;
-                            if (friendReactionFilter === 'dislikes') return item.action === 'dislike' || item.isDisliked;
+                            if (friendReactionFilter === 'likes') return (item.likedByFriends || []).length > 0;
+                            if (friendReactionFilter === 'dislikes') return (item.dislikedByFriends || []).length > 0;
                             return true;
                         })
-                        .map((item: any, i: number) => (
-                            <View key={item._id || i} style={styles.feedCard}>
-                                <View style={styles.feedActorRow}>
-                                    <TouchableOpacity
-                                        style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}
-                                        onPress={() => router.push(`/user/${item.user?._id || item.actor?._id}`)}
-                                    >
-                                        <View style={styles.userAvatar}>
-                                            <Text style={styles.userAvatarText}>
-                                                {(item.actor?.username || item.user?.username)?.charAt(0).toUpperCase() || '?'}
-                                            </Text>
-                                        </View>
-                                        <Text style={styles.feedActorName}>{item.actor?.username || item.user?.username}</Text>
-                                    </TouchableOpacity>
-                                    <Text style={styles.feedActionText}>
-                                        {item.action === 'dislike' ? 'bunu beğenmedi (dislike)' : 'bunu beğendi'}
-                                    </Text>
-                                    <Text style={styles.timeText}>{timeAgo(item.createdAt)}</Text>
+                        .map((item: any, i: number) => {
+                            const actingFriend = item.likedByFriends?.[0] || item.dislikedByFriends?.[0] || item.actor || item.user;
+                            const isDislike = (item.dislikedByFriends || []).length > 0;
+                            const isLike = (item.likedByFriends || []).length > 0;
+                            return (
+                                <View key={item._id || i} style={styles.feedCard}>
+                                    <View style={styles.feedActorRow}>
+                                        <TouchableOpacity
+                                            style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}
+                                            onPress={() => router.push(`/user/${actingFriend?._id || actingFriend?.id}`)}
+                                        >
+                                            <View style={styles.userAvatar}>
+                                                <Text style={styles.userAvatarText}>
+                                                    {actingFriend?.username?.charAt(0).toUpperCase() || '?'}
+                                                </Text>
+                                            </View>
+                                            <Text style={styles.feedActorName}>{actingFriend?.username}</Text>
+                                        </TouchableOpacity>
+                                        <Text style={styles.feedActionText}>
+                                            {isDislike && isLike
+                                                ? 'buna tepki verdi'
+                                                : isDislike
+                                                ? 'bunu beğenmedi (dislike)'
+                                                : 'bunu beğendi'}
+                                        </Text>
+                                        <Text style={styles.timeText}>{timeAgo(item.createdAt)}</Text>
+                                    </View>
+                                    {item.movieTitle ? (
+                                        <TouchableOpacity
+                                            onPress={() => router.push(`/content/${item.tmdbId}?type=${item.mediaType || 'movie'}`)}
+                                            style={{ marginTop: 6 }}
+                                        >
+                                            <Text style={styles.movieTitle}>{item.movieTitle}</Text>
+                                            {item.reviewText ? <Text style={styles.reviewText}>"{item.reviewText}"</Text> : null}
+                                        </TouchableOpacity>
+                                    ) : item.name ? (
+                                        <Text style={styles.listName}>{item.name}</Text>
+                                    ) : (
+                                        <Text style={styles.commentContent}>{item.content}</Text>
+                                    )}
                                 </View>
-                                {item.movieTitle ? (
-                                    <TouchableOpacity
-                                        onPress={() => router.push(`/content/${item.tmdbId}?type=${item.mediaType || 'movie'}`)}
-                                        style={{ marginTop: 6 }}
-                                    >
-                                        <Text style={styles.movieTitle}>{item.movieTitle}</Text>
-                                        {item.reviewText ? <Text style={styles.reviewText}>"{item.reviewText}"</Text> : null}
-                                    </TouchableOpacity>
-                                ) : item.name ? (
-                                    <Text style={styles.listName}>{item.name}</Text>
-                                ) : (
-                                    <Text style={styles.commentContent}>{item.content}</Text>
-                                )}
-                            </View>
-                        ))
+                            );
+                        })
                 )}
             </ScrollView>
         );
@@ -1024,7 +1105,7 @@ export default function CommunityScreen() {
                     }
                 />
             ) : (
-                renderFriendFeed()
+                renderFriendActivity()
             )}
 
             {/* Sort Selection Modal */}

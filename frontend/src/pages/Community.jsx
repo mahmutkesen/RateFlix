@@ -489,14 +489,79 @@ const Community = () => {
     // Client-side text filter helper for friend activity sub-tabs
     const filterFriendItem = (item) => {
         if (!debouncedSearch) return true;
-        const q = debouncedSearch.toLowerCase();
-        const username = item.user?.username?.toLowerCase() || '';
-        const title = (item.movieTitle || item.name || item.targetInfo?.title || item.target?.title || '').toLowerCase();
-        const text = (item.reviewText || item.description || item.content || '').toLowerCase();
+        const q = debouncedSearch.toLowerCase().trim();
+        const qTr = debouncedSearch.toLocaleLowerCase('tr-TR').trim();
+
+        const matchText = (val) => {
+            if (!val) return false;
+            const str = String(val);
+            const lower = str.toLowerCase();
+            const lowerTr = str.toLocaleLowerCase('tr-TR');
+            return lower.includes(q) || lowerTr.includes(qTr) || lower.includes(qTr) || lowerTr.includes(q);
+        };
+
+        const username = item.user?.username || '';
+
+        // Check if any friend who liked this matches the search query
+        const likedFriendMatch = (item.likedByFriends || []).some(f => 
+            matchText(typeof f === 'string' ? f : f?.username)
+        );
+
+        // Check if any friend who disliked this matches the search query
+        const dislikedFriendMatch = (item.dislikedByFriends || []).some(f => 
+            matchText(typeof f === 'string' ? f : f?.username)
+        );
+
+        // Single actor / friend / target author match
+        const actorMatch = matchText(item.actor?.username || item.friend?.username);
+        const targetAuthor = item.targetInfo?.author || item.target?.user?.username || '';
+
+        const title = item.movieTitle || item.name || item.targetInfo?.title || item.target?.title || item.title || '';
+        const text = item.reviewText || item.description || item.content || '';
+        
         // Also search in list item titles!
-        const itemsText = (item.items || []).map(i => i.title || '').join(' ').toLowerCase();
-        return username.includes(q) || title.includes(q) || text.includes(q) || itemsText.includes(q);
+        const itemsText = (item.items || []).map(i => i.title || i.name || '').join(' ');
+
+        return matchText(username) || 
+               likedFriendMatch || 
+               dislikedFriendMatch || 
+               actorMatch || 
+               matchText(targetAuthor) || 
+               matchText(title) || 
+               matchText(text) || 
+               matchText(itemsText);
     };
+
+    // Auto-switch friend subtab when search query has results in another subtab
+    useEffect(() => {
+        if (!debouncedSearch || activeTab !== 'friends') return;
+        const listsCount = friendActivity.lists.filter(filterFriendItem).length;
+        const commentsCount = friendActivity.comments.filter(filterFriendItem).length;
+        const likedCount = friendActivity.likedContent.filter(filterFriendItem).length;
+
+        if (friendSubTab === 'lists' && listsCount === 0) {
+            if (likedCount > 0) {
+                setFriendSubTab('liked');
+            } else if (commentsCount > 0) {
+                setFriendSubTab('comments');
+            }
+        } else if (friendSubTab === 'comments' && commentsCount === 0) {
+            if (likedCount > 0) {
+                setFriendSubTab('liked');
+            } else if (listsCount > 0) {
+                setFriendSubTab('lists');
+            }
+        } else if (friendSubTab === 'liked' && likedCount === 0) {
+            if (likedCount === 0 && (listsCount > 0 || commentsCount > 0)) {
+                if (listsCount > 0) {
+                    setFriendSubTab('lists');
+                } else {
+                    setFriendSubTab('comments');
+                }
+            }
+        }
+    }, [debouncedSearch, activeTab, friendActivity]);
+
 
     // Helper: Render Interactive Friend Liked/Disliked Banner
     const renderFriendReactionBanner = (item) => {
@@ -1184,13 +1249,13 @@ const Community = () => {
                                         className={`friend-subtab-btn ${friendSubTab === 'lists' ? 'active' : ''}`}
                                         onClick={() => setFriendSubTab('lists')}
                                     >
-                                        <FaList size={13} /> Paylaşılan Listeler ({friendActivity.lists.length})
+                                        <FaList size={13} /> Paylaşılan Listeler ({debouncedSearch ? sortFriendItems(friendActivity.lists).filter(filterFriendItem).length : friendActivity.lists.length})
                                     </button>
                                     <button
                                         className={`friend-subtab-btn ${friendSubTab === 'comments' ? 'active' : ''}`}
                                         onClick={() => setFriendSubTab('comments')}
                                     >
-                                        <FaComment size={13} /> Yorumlar ve İncelemeler ({friendActivity.comments.length})
+                                        <FaComment size={13} /> Yorumlar ve İncelemeler ({debouncedSearch ? sortFriendItems(friendActivity.comments).filter(filterFriendItem).length : friendActivity.comments.length})
                                     </button>
                                     <button
                                         className={`friend-subtab-btn ${friendSubTab === 'liked' ? 'active' : ''}`}
@@ -1200,7 +1265,7 @@ const Community = () => {
                                             <FaThumbsUp size={11} style={{ color: '#2ed573' }} />
                                             <FaThumbsDown size={11} style={{ color: '#ff7675' }} />
                                         </span>
-                                        Beğendiği & Dislike Attığı ({friendActivity.likedContent.length})
+                                        Beğendiği & Dislike Attığı ({debouncedSearch ? sortFriendItems(friendActivity.likedContent).filter(filterFriendItem).length : friendActivity.likedContent.length})
                                     </button>
                                 </div>
 
@@ -1209,7 +1274,21 @@ const Community = () => {
                                     <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                                         {sortFriendItems(friendActivity.lists).filter(filterFriendItem).length === 0 ? (
                                             <div className="glass-panel" style={{ padding: '2.5rem', textAlign: 'center', color: 'var(--text-muted)' }}>
-                                                Arkadaşlarınızın paylaştığı liste bulunmuyor.
+                                                <p>Arkadaşlarınızın paylaştığı liste bulunmuyor.</p>
+                                                {debouncedSearch && sortFriendItems(friendActivity.likedContent).filter(filterFriendItem).length > 0 && (
+                                                    <div style={{ marginTop: '1.2rem', borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: '1rem' }}>
+                                                        <p style={{ color: '#fff', fontSize: '0.9rem', marginBottom: '0.6rem' }}>
+                                                            "{debouncedSearch}" araması için tepkiler sekmesinde hareket bulundu:
+                                                        </p>
+                                                        <button
+                                                            className="btn-primary hover-scale"
+                                                            style={{ fontSize: '0.85rem', padding: '6px 18px', borderRadius: '20px', cursor: 'pointer' }}
+                                                            onClick={() => setFriendSubTab('liked')}
+                                                        >
+                                                            <FaThumbsUp size={11} /> Beğendiği & Dislike Attığı ({sortFriendItems(friendActivity.likedContent).filter(filterFriendItem).length})
+                                                        </button>
+                                                    </div>
+                                                )}
                                             </div>
                                         ) : (
                                             sortFriendItems(friendActivity.lists).filter(filterFriendItem).map((list) => {
@@ -1366,7 +1445,21 @@ const Community = () => {
                                     <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
                                         {sortFriendItems(friendActivity.comments).filter(filterFriendItem).length === 0 ? (
                                             <div className="glass-panel" style={{ padding: '2.5rem', textAlign: 'center', color: 'var(--text-muted)' }}>
-                                                Arkadaşlarınızın paylaştığı inceleme veya yorum bulunmuyor.
+                                                <p>Arkadaşlarınızın paylaştığı inceleme veya yorum bulunmuyor.</p>
+                                                {debouncedSearch && sortFriendItems(friendActivity.likedContent).filter(filterFriendItem).length > 0 && (
+                                                    <div style={{ marginTop: '1.2rem', borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: '1rem' }}>
+                                                        <p style={{ color: '#fff', fontSize: '0.9rem', marginBottom: '0.6rem' }}>
+                                                            "{debouncedSearch}" araması için tepkiler sekmesinde hareket bulundu:
+                                                        </p>
+                                                        <button
+                                                            className="btn-primary hover-scale"
+                                                            style={{ fontSize: '0.85rem', padding: '6px 18px', borderRadius: '20px', cursor: 'pointer' }}
+                                                            onClick={() => setFriendSubTab('liked')}
+                                                        >
+                                                            <FaThumbsUp size={11} /> Beğendiği & Dislike Attığı ({sortFriendItems(friendActivity.likedContent).filter(filterFriendItem).length})
+                                                        </button>
+                                                    </div>
+                                                )}
                                             </div>
                                         ) : (
                                             sortFriendItems(friendActivity.comments).filter(filterFriendItem).map(item => {
@@ -1479,19 +1572,19 @@ const Community = () => {
                                                 className={`filter-pill-btn ${friendReactionFilter === 'all' ? 'active' : ''}`}
                                                 onClick={() => setFriendReactionFilter('all')}
                                             >
-                                                Tümü ({friendActivity.likedContent.length})
+                                                Tümü ({debouncedSearch ? sortFriendItems(friendActivity.likedContent).filter(filterFriendItem).length : friendActivity.likedContent.length})
                                             </button>
                                             <button
                                                 className={`filter-pill-btn ${friendReactionFilter === 'likes' ? 'active' : ''}`}
                                                 onClick={() => setFriendReactionFilter('likes')}
                                             >
-                                                <FaThumbsUp size={11} style={{ color: '#2ed573' }} /> Beğenilenler ({friendActivity.likedContent.filter(i => (i.likedByFriends || []).length > 0).length})
+                                                <FaThumbsUp size={11} style={{ color: '#2ed573' }} /> Beğenilenler ({sortFriendItems(friendActivity.likedContent).filter(i => (i.likedByFriends || []).length > 0).filter(filterFriendItem).length})
                                             </button>
                                             <button
                                                 className={`filter-pill-btn ${friendReactionFilter === 'dislikes' ? 'active' : ''}`}
                                                 onClick={() => setFriendReactionFilter('dislikes')}
                                             >
-                                                <FaThumbsDown size={11} style={{ color: '#ff7675' }} /> Dislike Atılanlar ({friendActivity.likedContent.filter(i => (i.dislikedByFriends || []).length > 0).length})
+                                                <FaThumbsDown size={11} style={{ color: '#ff7675' }} /> Dislike Atılanlar ({sortFriendItems(friendActivity.likedContent).filter(i => (i.dislikedByFriends || []).length > 0).filter(filterFriendItem).length})
                                             </button>
                                         </div>
 
@@ -1503,7 +1596,16 @@ const Community = () => {
                                             })
                                             .filter(filterFriendItem).length === 0 ? (
                                             <div className="glass-panel" style={{ padding: '2.5rem', textAlign: 'center', color: 'var(--text-muted)' }}>
-                                                Arkadaşlarınızın bu kategoride bir tepkisi bulunmuyor.
+                                                <p>Arkadaşlarınızın bu kategoride bir tepkisi bulunmuyor.</p>
+                                                {debouncedSearch && friendReactionFilter !== 'all' && (
+                                                    <button
+                                                        className="btn-secondary hover-scale"
+                                                        style={{ marginTop: '0.8rem', fontSize: '0.85rem', padding: '6px 18px', borderRadius: '20px', cursor: 'pointer' }}
+                                                        onClick={() => setFriendReactionFilter('all')}
+                                                    >
+                                                        Tüm Tepkileri Göster ({sortFriendItems(friendActivity.likedContent).filter(filterFriendItem).length})
+                                                    </button>
+                                                )}
                                             </div>
                                         ) : (
                                             sortFriendItems(friendActivity.likedContent)
